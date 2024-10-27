@@ -1,44 +1,102 @@
-import React from 'react';
-import { Navbar, Nav, Container } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Navbar, Nav, Button, Container, Dropdown } from 'react-bootstrap';
+import { FaArrowLeft, FaUser, FaPlus, FaSignOutAlt, FaBell } from 'react-icons/fa';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { signOut } from 'firebase/auth';
 import { auth } from './firebase';
+import darkTheme from './theme';
 
 function NavBar() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser } = useAuth();
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const handleBack = () => {
+    navigate(-1);
+  };
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      navigate('/');
     } catch (error) {
       console.error("Error signing out: ", error);
     }
   };
 
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
+  };
+
+  const isHomePage = location.pathname === '/';
+  const showBackButton = !isHomePage && location.pathname !== '/feed';
+
+  const navbarStyle = {
+    backgroundColor: darkTheme.colors.surface,
+    borderBottom: `1px solid ${darkTheme.colors.primary}40`,
+    padding: '0.5rem 1rem',
+  };
+
+  const buttonStyle = {
+    backgroundColor: 'transparent',
+    color: darkTheme.colors.primary,
+    border: 'none',
+    padding: '0.4rem 0.6rem',
+    fontSize: '0.9rem',
+    marginLeft: '0.5rem',
+  };
+
+  const iconStyle = {
+    marginRight: '0.3rem',
+  };
+
+  const dropdownStyle = {
+    backgroundColor: darkTheme.colors.surface,
+    border: `1px solid ${darkTheme.colors.primary}40`,
+    borderRadius: '0.25rem',
+    boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+    padding: '1rem',
+    minWidth: '250px',
+  };
+
   return (
-    <Navbar bg="light" expand="lg">
-      <Container>
-        <Navbar.Brand as={Link} to="/">Lost and Found</Navbar.Brand>
+    <Navbar style={navbarStyle} expand="lg">
+      <Container fluid>
+        {showBackButton && (
+          <Button onClick={handleBack} style={buttonStyle}>
+            <FaArrowLeft style={iconStyle} />
+          </Button>
+        )}
+        <Navbar.Brand as={Link} to="/" style={{ color: darkTheme.colors.primary, fontWeight: 'bold' }}>
+          Lost and Found
+        </Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="me-auto">
-            <Nav.Link as={Link} to="/">Home</Nav.Link>
-            {currentUser ? (
-              <>
-                <Nav.Link as={Link} to="/feed">Feed</Nav.Link>
-                <Nav.Link as={Link} to="/report">Report Item</Nav.Link>
-                <Nav.Link as={Link} to="/matches">Matches</Nav.Link>
-                <Nav.Link as={Link} to="/profile">Profile</Nav.Link>
-                <Nav.Link onClick={handleLogout}>Logout</Nav.Link>
-              </>
-            ) : (
-              <>
-                <Nav.Link as={Link} to="/login">Login</Nav.Link>
-                <Nav.Link as={Link} to="/signup">Sign Up</Nav.Link>
-              </>
-            )}
-          </Nav>
+          {currentUser && !isHomePage && (
+            <Nav className="ms-auto">
+              <Button as={Link} to="/report" style={buttonStyle}>
+                <FaPlus style={iconStyle} /> Report
+              </Button>
+              <Dropdown show={showNotifications} onToggle={toggleNotifications}>
+                <Dropdown.Toggle as={Button} style={buttonStyle}>
+                  <FaBell style={iconStyle} />
+                </Dropdown.Toggle>
+                <Dropdown.Menu align="end" style={dropdownStyle}>
+                  <Dropdown.Item style={{ color: darkTheme.text.primary }}>
+                    All notifications up to date
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+              <Button as={Link} to="/profile" style={buttonStyle}>
+                <FaUser style={iconStyle} />
+              </Button>
+              <Button onClick={handleLogout} style={buttonStyle}>
+                <FaSignOutAlt style={iconStyle} />
+              </Button>
+            </Nav>
+          )}
         </Navbar.Collapse>
       </Container>
     </Navbar>

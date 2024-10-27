@@ -5,17 +5,14 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
 
 function PrivateRoute({ children }) {
-  const { currentUser, loading } = useAuth();
+  const auth = useAuth();
 
-  if (loading) {
-    return <div>Loading...</div>;
+  if (auth.loading) {
+    // You can return a loading spinner or null here
+    return null;
   }
 
-  if (!currentUser) {
-    return <Navigate to="/login" />;
-  }
-
-  return children;
+  return auth.currentUser ? children : <Navigate to="/login" />;
 }
 
 export default PrivateRoute;

@@ -4,78 +4,98 @@ import React, { useState } from "react";
 import { auth, db } from "./firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { Container, Form, Button, Alert } from 'react-bootstrap';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Container, Form, Button, Alert, Card } from 'react-bootstrap';
+import NavBar from './NavBar';
+import darkTheme from './theme';
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 function Login() {
-  const [usernameOrEmail, setUsernameOrEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [emailOrUsername, setEmailOrUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-
+    setError('');
+    
     try {
-      let email = usernameOrEmail;
-
+      let email = emailOrUsername;
+      
       // Check if input is a username
-      if (!usernameOrEmail.includes("@")) {
+      if (!emailOrUsername.includes('@')) {
         const usersRef = collection(db, "users");
-        const q = query(usersRef, where("username", "==", usernameOrEmail));
+        const q = query(usersRef, where("username", "==", emailOrUsername));
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {
-          setError("No user found with this username.");
-          return;
+          throw new Error("No user found with this username.");
         }
-
+        
         email = querySnapshot.docs[0].data().email;
       }
-
+      
       await signInWithEmailAndPassword(auth, email, password);
-      console.log("User logged in successfully");
-      navigate("/feed");
+      navigate('/feed');
     } catch (error) {
-      console.error("Error during login:", error);
-      setError(error.message);
+      setError('Failed to log in. Please check your credentials.');
+      console.error(error);
     }
   };
 
   return (
-    <Container className="mt-5">
-      <h2>Login</h2>
-      {error && <Alert variant="danger">{error}</Alert>}
-      <Form onSubmit={handleLogin}>
-        <Form.Group className="mb-3">
-          <Form.Label>Username or Email</Form.Label>
-          <Form.Control 
-            type="text" 
-            placeholder="Enter username or email" 
-            value={usernameOrEmail}
-            onChange={(e) => setUsernameOrEmail(e.target.value)}
-            required
-          />
-        </Form.Group>
-        <Form.Group className="mb-3">
-          <Form.Label>Password</Form.Label>
-          <Form.Control 
-            type="password" 
-            placeholder="Password" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </Form.Group>
-        <Button variant="primary" type="submit">
-          Login
-        </Button>
-      </Form>
-      <p className="mt-3">
-        Don't have an account? <Link to="/signup">Sign up here</Link>
-      </p>
-    </Container>
+    <div style={{ backgroundColor: darkTheme.colors.background, minHeight: '100vh' }}>
+      <NavBar />
+      <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: 'calc(100vh - 56px)' }}>
+        <div style={{ width: '100%', maxWidth: '400px' }}>
+          <Card style={{ backgroundColor: darkTheme.colors.surface }}>
+            <Card.Body className="p-4">
+              <h2 className="text-center mb-4" style={{ color: darkTheme.text.primary }}>Log In</h2>
+              {error && <Alert variant="danger">{error}</Alert>}
+              <Form onSubmit={handleSubmit}>
+                <Form.Group id="emailOrUsername" className="mb-3">
+                  <Form.Label style={{ color: darkTheme.text.primary }}>Email or Username</Form.Label>
+                  <Form.Control 
+                    type="text" 
+                    required 
+                    value={emailOrUsername} 
+                    onChange={(e) => setEmailOrUsername(e.target.value)}
+                    style={{
+                      backgroundColor: darkTheme.colors.background,
+                      color: darkTheme.text.primary,
+                      border: `1px solid ${darkTheme.colors.primary}40`
+                    }}
+                  />
+                </Form.Group>
+                <Form.Group id="password" className="mb-4">
+                  <Form.Label style={{ color: darkTheme.text.primary }}>Password</Form.Label>
+                  <Form.Control 
+                    type="password" 
+                    required 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)}
+                    style={{
+                      backgroundColor: darkTheme.colors.background,
+                      color: darkTheme.text.primary,
+                      border: `1px solid ${darkTheme.colors.primary}40`
+                    }}
+                  />
+                </Form.Group>
+                <Button className="w-100 mb-3" type="submit" style={{
+                  backgroundColor: darkTheme.colors.primary,
+                  borderColor: darkTheme.colors.primary
+                }}>
+                  Log In
+                </Button>
+              </Form>
+              <div className="text-center mt-3" style={{ color: darkTheme.text.secondary }}>
+                Need an account? <Link to="/signup" style={{ color: darkTheme.colors.primary }}>Sign Up</Link>
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
+      </Container>
+    </div>
   );
 }
 

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db, storage } from './firebase';
+import { auth, db, storage } from '../../config/firebase';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Container, Row, Col, Image, Form, Button, Card, Alert, Modal, Spinner, Badge } from 'react-bootstrap';
-import NavBar from './NavBar';
+import NavBar from '../layout/NavBar';
 import { FaEdit, FaCamera, FaMapMarkerAlt, FaClock } from 'react-icons/fa';
-import darkTheme from './theme';
+import darkTheme from '../../config/theme';
 
 function Profile() {
   const [user, setUser] = useState(null);

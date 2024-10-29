@@ -1,12 +1,12 @@
 // Login.js
 
 import React, { useState } from "react";
-import { auth, db } from "./firebase";
+import { auth, db } from '../../config/firebase';
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
 import { Container, Form, Button, Alert, Card } from 'react-bootstrap';
-import NavBar from './NavBar';
-import darkTheme from './theme';
+import NavBar from '../layout/NavBar';
+import darkTheme from '../../config/theme';
 import { collection, query, where, getDocs } from "firebase/firestore";
 
 function Login() {

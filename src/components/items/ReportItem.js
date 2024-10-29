@@ -1,15 +1,15 @@
 // reportitem.js
 
 import React, { useState } from 'react';
-import { db, auth } from './firebase';
+import { db, auth } from '../../config/firebase';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { Container, Form, Button, Card, Row, Col } from 'react-bootstrap';
 import { FaMapMarkerAlt, FaCalendarAlt } from 'react-icons/fa';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import darkTheme from './theme';
-import NavBar from './NavBar';  // Import NavBar component
+import darkTheme from '../../config/theme';
+import NavBar from '../layout/NavBar';  // Import NavBar component
 import styled from 'styled-components';
 
 const StyledFormControl = styled(Form.Control)`

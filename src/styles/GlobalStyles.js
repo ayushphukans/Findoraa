@@ -1,5 +1,5 @@
 import { createGlobalStyle } from 'styled-components';
-import darkTheme from './theme';
+import darkTheme from '../config/theme';
 
 const GlobalStyles = createGlobalStyle`
   @import url('https://api.fontshare.com/v2/css?f[]=clash-grotesk@400,700,500,600&display=swap');

@@ -2,12 +2,12 @@
 
   import React, { useState, useEffect } from 'react';
   import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-  import { db } from './firebase';
+  import { db } from '../../config/firebase';
   // import { useNavigate } from 'react-router-dom';
   import { Container, Row, Col, Card, Form, InputGroup, Badge, Button } from 'react-bootstrap';
   import { FaSearch, FaMapMarkerAlt, FaClock } from 'react-icons/fa';
-  import NavBar from './NavBar';
-  import darkTheme from './theme';
+  import NavBar from '../layout/NavBar';
+  import darkTheme from '../../config/theme';
   import styled from 'styled-components';
 
   // Update the StyledFormControl

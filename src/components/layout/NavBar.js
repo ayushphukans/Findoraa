@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Navbar, Nav, Button, Container, Dropdown } from 'react-bootstrap';
 import { FaArrowLeft, FaUser, FaPlus, FaSignOutAlt, FaBell } from 'react-icons/fa';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useAuth } from './AuthProvider';
+import { useAuth } from '../../components/auth/AuthProvider';
 import { signOut } from 'firebase/auth';
-import { auth } from './firebase';
-import darkTheme from './theme';
+import { auth } from '../../config/firebase';
+import darkTheme from '../../config/theme';
 
 function NavBar() {
   const navigate = useNavigate();

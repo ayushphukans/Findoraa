@@ -1,13 +1,13 @@
 // Signup.js
 
 import React, { useState } from "react";
-import { auth, db } from "./firebase";
+import { auth, db } from '../../config/firebase';
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
 import { Container, Form, Button, Alert, Card } from 'react-bootstrap';
 import { doc, setDoc } from "firebase/firestore";
-import NavBar from './NavBar';
-import darkTheme from './theme';
+import NavBar from '../layout/NavBar';
+import darkTheme from '../../config/theme';
 
 function Signup() {
   const [email, setEmail] = useState("");

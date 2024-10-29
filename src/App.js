@@ -2,21 +2,29 @@
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { AuthProvider } from './AuthProvider';
-import Home from "./home";
-import Signup from "./signup";
-import Login from "./login";
-import Feed from "./feed";
-import ReportItem from "./reportitem";
-import Matches from "./matches"; 
-import PrivateRoute from "./privateroute";
-import Profile from './profile';
+import { AuthProvider } from './components/auth/AuthProvider';
+import Home from "./components/pages/Home";
+import Signup from "./components/auth/Signup";
+import Login from "./components/auth/Login";
+import Feed from "./components/pages/Feed";
+import ReportItem from "./components/items/ReportItem";
+import Matches from "./components/items/Matches";
+import PrivateRoute from "./components/auth/PrivateRoute";
+import Profile from './components/pages/Profile';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { ThemeProvider } from 'styled-components';
-import darkTheme, { getThemeStyles } from './theme';
-import GlobalStyles from './GlobalStyles';  // Import GlobalStyles
+import darkTheme from './config/theme';
+import GlobalStyles from './styles/GlobalStyles';  // Import GlobalStyles
+import { useEffect } from 'react';
+import { runMatchingService } from './services/matchingService';
+
+
 
 function App() {
+  useEffect(() => {
+    runMatchingService();
+  }, []);
+
   return (
     <>
       <GlobalStyles />

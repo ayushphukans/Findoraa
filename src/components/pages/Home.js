@@ -3,7 +3,7 @@
 import React from "react";
 import { Container, Button } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import NavBar from './NavBar';
+import NavBar from '../../components/layout/NavBar';
 
 function Home() {
   return (

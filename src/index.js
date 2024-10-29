@@ -2,12 +2,12 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
+import './styles/index.css';
 import App from './App';
-import { AuthProvider } from './authcontext'; // Import AuthProvider
-import reportWebVitals from './reportWebVitals';
+import { AuthProvider } from './components/auth/AuthProvider'; // Import AuthProvider
+import reportWebVitals from './utils/reportWebVitals';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import ErrorBoundary from './ErrorBoundary';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

@@ -11,6 +11,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import darkTheme from '../../config/theme';
 import NavBar from '../layout/NavBar';  // Import NavBar component
 import styled from 'styled-components';
+import { extractAttributes } from '../../services/attributeService';
 
 const StyledFormControl = styled(Form.Control)`
   background-color: ${darkTheme.colors.surface} !important;
@@ -80,7 +81,7 @@ function ReportItem() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'items'), {
+      const itemData = {
         lostOrFound,
         title,
         description,
@@ -89,7 +90,14 @@ function ReportItem() {
         time: dateTime.toTimeString().split(' ')[0],
         userId: auth.currentUser.uid,
         createdAt: Timestamp.now(),
-      });
+      };
+
+      const attributes = await extractAttributes(itemData);
+      itemData.category = attributes.category;
+      itemData.subcategory = attributes.subcategory;
+      itemData.attributes = attributes;
+
+      await addDoc(collection(db, 'items'), itemData);
       alert('Item reported successfully!');
       navigate('/feed');
     } catch (error) {
@@ -216,3 +224,6 @@ function ReportItem() {
 }
 
 export default ReportItem;
+
+
+

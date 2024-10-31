@@ -1,171 +1,132 @@
 import { db } from '../config/firebase';
-import { collection, getDocs, query, where, addDoc, doc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { extractAttributes } from './attributeService';
+import { openai } from '../config/openai';
 
-// Check that this URL matches your Ollama setup
-const OLLAMA_URL = 'http://127.0.0.1:11434/api/generate';
+export const findPotentialMatches = async (newItem, topN = 5) => {
+  console.log('🔍 Finding potential matches for:', newItem);
 
-export const runMatchingService = async () => {
   try {
-    // Prevent multiple runs
-    if (window.isMatchingServiceRunning) {
-      console.log("Matching service already running, skipping");
-      return;
-    }
-    window.isMatchingServiceRunning = true;
-
-    console.log("Starting matching service run");
+    // Step 1: Get items from the same category
+    const itemsRef = collection(db, 'items');
+    const q = query(
+      itemsRef,
+      where('category', '==', newItem.category),
+      where('subcategory', '==', newItem.subcategory)
+    );
     
-    const lostQuery = query(collection(db, 'items'), where('lostOrFound', '==', 'Lost'));
-    const foundQuery = query(collection(db, 'items'), where('lostOrFound', '==', 'Found'));
+    const querySnapshot = await getDocs(q);
+    const matchesPool = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
-    const [lostSnapshot, foundSnapshot] = await Promise.all([
-      getDocs(lostQuery),
-      getDocs(foundQuery)
-    ]);
-
-    console.log(`Starting comparison of ${foundSnapshot.docs.length} found items and ${lostSnapshot.docs.length} lost items`);
-
-    let comparisonCount = 0;
-    const totalComparisons = lostSnapshot.docs.length * foundSnapshot.docs.length;
-
-    const getSimilarityScore = async (text1, text2) => {
-      try {
-        const response = await fetch(OLLAMA_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: "llama2",
-            prompt: `Compare these two texts and return a similarity score between 0 and 100:
-                    Text 1: "${text1}"
-                    Text 2: "${text2}"
-                    Return only the number, no other text.`,
-            stream: false
-          })
-        });
-
-        if (!response.ok) {
-          console.error('Error calling Ollama:', response.status);
-          // Fallback to simple text matching if API fails
-          return calculateBasicSimilarity(text1, text2);
-        }
-
-        const data = await response.json();
-        const score = parseInt(data.response);
-        return isNaN(score) ? calculateBasicSimilarity(text1, text2) : score;
-
-      } catch (error) {
-        console.error('Error in similarity check:', error);
-        // Fallback to simple text matching
-        return calculateBasicSimilarity(text1, text2);
-      }
-    };
-
-    // Add basic fallback similarity calculation
-    const calculateBasicSimilarity = (text1, text2) => {
-      const words1 = text1.toLowerCase().split(/\W+/);
-      const words2 = text2.toLowerCase().split(/\W+/);
-      const commonWords = words1.filter(word => words2.includes(word));
-      return Math.round((commonWords.length * 2 / (words1.length + words2.length)) * 100);
-    };
-
-    for (const lostDoc of lostSnapshot.docs) {
-      const lostItem = lostDoc.data();
+    // Step 2: Attribute-Based Filtering
+    const filteredMatches = matchesPool.filter(item => {
+      // Skip the same item
+      if (item.id === newItem.id) return false;
       
-      for (const foundDoc of foundSnapshot.docs) {
-        const foundItem = foundDoc.data();
-        comparisonCount++;
-        
-        console.log(`Processing comparison ${comparisonCount}/${totalComparisons}`);
-        
-        try {
-          console.log(`Comparing:\nLost: ${lostItem.description}\nFound: ${foundItem.description}`);
-          
-          const score = await getSimilarityScore(lostItem.description, foundItem.description);
-          
-          console.log(`Similarity score: ${score}`);
-          
-          const comparisonData = {
-            lostItemId: lostDoc.id,
-            foundItemId: foundDoc.id,
-            similarity: score,
-            timestamp: new Date(),
-            notificationSent: false
-          };
+      // Filter based on lost/found status (opposite of new item)
+      if (item.lostOrFound === newItem.lostOrFound) return false;
+      
+      // Filter by date range (within 30 days)
+      const itemDate = new Date(item.date);
+      const newItemDate = new Date(newItem.date);
+      const daysDifference = Math.abs((itemDate - newItemDate) / (1000 * 60 * 60 * 24));
+      if (daysDifference > 30) return false;
 
-          // Store comparison in Firebase
-          await addDoc(collection(db, 'comparisons'), comparisonData);
+      return true;
+    });
 
-          // If similarity is high, create notification
-          if (score >= 80) {
-            await createNotification({
-              userId: lostItem.userId, // User who lost the item
-              title: 'Potential Match Found!',
-              message: `We found an item that matches your lost item description with ${score}% similarity.`,
-              type: 'match',
-              itemId: lostItem.id,
-              matchedItemId: foundItem.id,
-              status: 'unread',
-              createdAt: new Date()
-            });
-          }
-        } catch (error) {
-          console.error('Error storing comparison or sending notification:', error);
-          continue;
-        }
+    // Step 3: Calculate Similarity Scores using OpenAI
+    const scoredMatches = await Promise.all(
+      filteredMatches.map(async (item) => {
+        const { score, justification } = await calculateSimilarityScore(newItem, item);
+        return {
+          item,
+          similarityScore: score,
+          justification
+        };
+      })
+    );
+
+    // Step 4: Sort by score descending
+    scoredMatches.sort((a, b) => b.similarityScore - a.similarityScore);
+
+    // Step 5: Return top N matches
+    return scoredMatches.slice(0, topN);
+
+  } catch (error) {
+    console.error('❌ Error finding matches:', error);
+    return [];
+  }
+};
+
+const calculateSimilarityScore = async (newItem, existingItem) => {
+  try {
+    const prompt = `
+      You are an intelligent lost and found matching system. Compare these two items and:
+      1. Calculate a similarity score (0-100)
+      2. Provide a detailed justification for the score
+      
+      New Item:
+      - Type: ${newItem.category}/${newItem.subcategory}
+      - Description: ${newItem.description}
+      - Location: ${newItem.location}
+      - Date: ${newItem.date}
+      
+      Existing Item:
+      - Type: ${existingItem.category}/${existingItem.subcategory}
+      - Description: ${existingItem.description}
+      - Location: ${existingItem.location}
+      - Date: ${existingItem.date}
+      
+      Response Format:
+      {
+        "score": number,
+        "justification": "detailed explanation"
       }
-    }
-    
-    console.log('Matching service completed successfully');
-    
-  } catch (error) {
-    console.error("Error in matching service:", error);
-  } finally {
-    window.isMatchingServiceRunning = false;
-  }
-};
+    `;
 
-// Function to create notification
-const createNotification = async (notificationData) => {
-  try {
-    const notificationsRef = collection(db, 'notifications');
-    await addDoc(notificationsRef, notificationData);
-    
-    // If you're using FCM (Firebase Cloud Messaging), add this:
-    if (notificationData.userId) {
-      await sendPushNotification(notificationData);
-    }
-  } catch (error) {
-    console.error('Error creating notification:', error);
-  }
-};
-
-// Optional: Function to send push notification using FCM
-const sendPushNotification = async (notificationData) => {
-  try {
-    const userDoc = await getDoc(doc(db, 'users', notificationData.userId));
-    const fcmToken = userDoc.data()?.fcmToken;
-
-    if (fcmToken) {
-      const message = {
-        notification: {
-          title: notificationData.title,
-          body: notificationData.message
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: "You are a precise matching system. Respond only with the JSON format specified."
         },
-        token: fcmToken
-      };
+        {
+          role: "user",
+          content: prompt
+        }
+      ]
+    });
 
-      // Send to Firebase Cloud Function
-      await fetch('YOUR_CLOUD_FUNCTION_URL', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message)
-      });
-    }
+    const result = JSON.parse(response.choices[0]?.message?.content || '{"score":0, "justification":"Error processing match"}');
+    return result;
+
   } catch (error) {
-    console.error('Error sending push notification:', error);
+    console.error('❌ Error calculating similarity:', error);
+    return { score: 0, justification: "Error calculating similarity score" };
   }
 };
+
+// Helper function to present matches in the UI
+export const formatMatchesForDisplay = (matches) => {
+  return matches.map(match => ({
+    id: match.item.id,
+    score: match.similarityScore,
+    justification: match.justification,
+    details: {
+      title: match.item.title,
+      description: match.item.description,
+      location: match.item.location,
+      date: match.item.date,
+      category: match.item.category,
+      subcategory: match.item.subcategory
+    }
+  }));
+};
+
+
+

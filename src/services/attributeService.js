@@ -5,31 +5,66 @@ export async function extractAttributes(item) {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const prompt = `
-       You are an intelligent system designed to extract key attributes from item descriptions for a lost and found application. Extract the following attributes:
+You are a PRECISE attribute extraction system for lost and found items. Extract ONLY the following attributes with these STRICT definitions:
 
-    1. Item Type
-    2. Color
-    3. Brand/Model
-    4. Size/Dimensions
-    5. Material
-    6. Unique Identifiers
-    7. Accessories
-    8. Condition
-    9. Contents
-    
-    **Description:** ${item.description}
+1. itemtype: The main item category (e.g., phone, wallet, bag)
 
-    **Extracted Attributes:**
-    - **Item Type:** 
-    - **Color:** 
-    - **Brand/Model:** 
-    - **Size/Dimensions:** 
-    - **Material:** 
-    - **Unique Identifiers:** 
-    - **Accessories:** 
-    - **Condition:** 
-    - **Contents:** 
-    `;
+2. color: Primary and secondary colors of the item's exterior
+   - Format: "primary color" or "primary color with secondary color"
+   - Example: "black" or "black with gold trim"
+
+3. brand/model: Manufacturer, brand name, or specific model
+   - If unknown, use "unknown"
+   - Example: "iPhone 13" or "Nike"
+
+4. size/dimensions: Physical size or measurements
+   - If unknown, use "unknown"
+   - Example: "13-inch" or "medium-sized"
+
+5. material: Main material(s) of the item
+   - Example: "leather", "plastic", "metal and glass"
+
+6. unique identifiers: ARRAY of distinguishing features or damage
+   - Include: scratches, cracks, stickers, engravings, serial numbers
+   - Include: damage descriptions, distinctive marks
+   - Example: ["cracked screen", "Pokemon sticker on back", "engraved initials 'JD'"]
+
+7. accessories: ARRAY of additional items attached/included
+   - Include: cases, covers, attached items
+   - Example: ["blue protective case", "keychain attached", "shoulder strap"]
+
+8. contents: ARRAY of items contained within
+   - Include: items inside bags/wallets/cases
+   - Include: digital content for devices (wallpaper description, lock screen)
+   - Example: ["3 credit cards", "house keys", "mountain landscape wallpaper"]
+
+9. condition: Physical state when found/lost
+   - Include: location context if relevant
+   - Example: "found under bench", "slightly worn", "new condition"
+
+STRICT RULES:
+- ALWAYS return ALL attributes, use "unknown" if not mentioned
+- Arrays should be empty [] if no items present
+- DO NOT create new attributes
+- DO NOT include location/time information in condition
+- DO NOT include contents in unique identifiers
+- Separate multiple items in arrays with commas
+
+Return in EXACT JSON format:
+{
+  "itemtype": "string",
+  "color": "string",
+  "brand/model": "string",
+  "size/dimensions": "string",
+  "material": "string",
+  "unique identifiers": ["string", "string"],
+  "accessories": ["string", "string"],
+  "contents": ["string", "string"],
+  "condition": "string"
+}
+
+Current item description:
+${item.description}`;
 
     const response = await fetch('http://localhost:5001/api/extract-attributes', {
       method: 'POST',

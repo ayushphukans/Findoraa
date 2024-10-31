@@ -13,6 +13,7 @@ import NavBar from '../layout/NavBar';  // Import NavBar component
 import styled from 'styled-components';
 import { extractAttributes } from '../../services/attributeService';
 import { findPotentialMatches } from '../../services/matchingService';
+import { categorizeItem } from '../../services/categoryService';
 
 const StyledFormControl = styled(Form.Control)`
   background-color: ${darkTheme.colors.surface} !important;
@@ -93,10 +94,10 @@ function ReportItem() {
         date: dateTime.toISOString().split('T')[0],
         time: dateTime.toTimeString().split(' ')[0],
         userId: auth.currentUser.uid,
-        createdAt: Timestamp.now(),
         category: 'uncategorized',
         subcategory: 'other',
-        subSubcategory: null
+        subSubcategory: 'other',
+        createdAt: new Date()
       };
 
       console.log('📝 Submitting new item:', itemData);
@@ -104,21 +105,30 @@ function ReportItem() {
       const attributes = await extractAttributes(itemData);
       itemData.attributes = attributes;
 
-      const categoryResponse = await fetch('http://localhost:5001/api/categorize-item', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attributes })
-      });
-      
-      const categories = await categoryResponse.json();
-      
+      const categoryResponse = await categorizeItem(attributes);
+      console.log('📦 Raw category response:', categoryResponse);
+
+      // Clean the response content - remove markdown formatting
+      let cleanContent = categoryResponse.content
+        .replace(/```json\n/, '')  // Remove opening ```json
+        .replace(/```/, '')        // Remove closing ```
+        .trim();                   // Remove extra whitespace
+
+      console.log('🧹 Cleaned content:', cleanContent);
+
+      // Parse the cleaned JSON
+      const categories = JSON.parse(cleanContent);
+      console.log('📦 Parsed categories:', categories);
+
       const finalItemData = {
         ...itemData,
         attributes,
-        category: categories.category,
-        subcategory: categories.subcategory,
-        subSubcategory: categories.subSubcategory
+        category: categories.category || 'uncategorized',
+        subcategory: categories.subcategory || 'other',
+        subSubcategory: categories.subSubcategory || 'other'
       };
+
+      console.log('📝 Final data to save:', finalItemData);
 
       await addDoc(collection(db, 'items'), finalItemData);
       alert('Item reported successfully!');
@@ -138,7 +148,7 @@ function ReportItem() {
       }
 
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ Error in handleSubmit:', error);
       alert('Error reporting item. Please try again.');
     }
   };

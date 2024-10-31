@@ -3,7 +3,7 @@ import { db } from '../config/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 
 // Define default categories directly in the service
-const defaultCategories = [
+export const defaultCategories = [
   {
     name: "Electronics",
     subcategories: [
@@ -357,89 +357,94 @@ const addNewCategory = async (categoryName, parentId = null) => {
 // Main categorization function
 export const categorizeItem = async (attributes) => {
   try {
-    // Get existing category hierarchy
-    const existingCategories = await getExistingHierarchy();
-    const formattedHierarchy = formatHierarchy(existingCategories);
-
     const prompt = `
-      You are a precise categorization system for a lost and found application. Your task is to categorize items according to our predefined hierarchy or create new categories when absolutely necessary.
+You are a STRICT categorization system for a lost and found application. Your PRIMARY DIRECTIVE is to use ONLY the predefined categories provided below. Creating new categories is STRICTLY FORBIDDEN unless absolutely no existing category fits.
 
-      **Current Item Attributes:**
-      ${JSON.stringify(attributes, null, 2)}
+**Current Item Attributes:**
+${JSON.stringify(attributes, null, 2)}
 
-      **Existing Category Hierarchy:**
-      ${formattedHierarchy}
+**MANDATORY: USE ONLY THESE PREDEFINED CATEGORIES:**
+${formatCategoryHierarchy(defaultCategories)}
 
-      **Instructions:**
-      1. FIRST, carefully analyze if the item fits into ANY existing category path
-      2. If it fits an existing path, use EXACT category names from our hierarchy
-      3. ONLY create new categories if the item CANNOT be reasonably placed in existing ones
+**STRICT CATEGORIZATION RULES:**
 
-      **Examples:**
-      - For a "blue leather wallet":
-        ✓ Category: "Personal Items"
-        ✓ Subcategory: "Wallets"
-        ✓ Sub-subcategory: "Leather Wallets"
+1. DEFAULT CATEGORIES ARE MANDATORY:
+- You MUST use ONLY categories from the hierarchy above
+- Creating new categories is STRICTLY FORBIDDEN
+- If unsure, use the closest matching category
+- When in doubt, use more general category instead of creating new ones
 
-      - For a "quantum teleporter" (doesn't exist in hierarchy):
-        ✓ Create new: {
-          "category": "Scientific Equipment",
-          "subcategory": "Experimental Devices",
-          "subSubcategory": "Quantum Devices"
-        }
+2. CATEGORY SELECTION PROCESS:
+a) Main Category (Level 1):
+   - MUST match exactly one of the predefined main categories
+   - NO new main categories allowed
+   - If unclear, use the most logical parent category
 
-      **Rules for New Categories:**
-      1. Must be NECESSARY - don't create if similar category exists
-      2. Must be GENERIC enough to accommodate similar items
-      3. Must follow the same 3-level hierarchy pattern
-      4. Must use clear, standard terminology
+b) Subcategory (Level 2):
+   - MUST use existing subcategories only
+   - NO new subcategories unless absolutely necessary
+   - When in doubt, use "Other" subcategory of appropriate main category
 
-      Return ONLY a JSON object with:
-      {
-        "category": "exact category name or new category",
-        "subcategory": "exact subcategory name or new subcategory",
-        "subSubcategory": "exact sub-subcategory name or new sub-subcategory",
-        "newCategories": {
-          "category": "only if creating new category",
-          "subcategory": "only if creating new subcategory",
-          "subSubcategory": "only if creating new sub-subcategory"
-        }
-      }
-    `;
+c) Sub-subcategory (Level 3):
+   - MUST match existing sub-subcategories
+   - Use "Other" if no exact match exists
+   - Creating new ones requires STRONG justification
 
-    // Replace OpenAI direct call with backend call
-    const response = await makeOpenAIRequest('categorize-item', {
-      prompt,
-      attributes,
-      model: "gpt-4",
-      temperature: 0.3
+3. BEFORE CREATING ANY NEW CATEGORY:
+- Verify NO existing category fits (check ALL possibilities)
+- Consider similar categories
+- Use more general category instead
+- Only create new if item CANNOT fit anywhere else
+
+IMPORTANT RULES:
+- Categorize ONLY the main item itself (e.g., "wallet"), NOT its contents
+- Do NOT categorize items found inside the main item
+- Return ONLY ONE category path for the main item type
+
+
+**VERIFICATION CHECKLIST:**
+✓ Is the category path in the predefined hierarchy?
+✓ Have you checked ALL possible existing categories?
+✓ Is there really NO suitable existing category?
+✓ Could a more general category work instead?
+
+Return ONLY valid category paths that EXACTLY match the hierarchy:
+{
+  "category": "EXACT existing main category",
+  "subcategory": "EXACT existing subcategory",
+  "subSubcategory": "EXACT existing sub-subcategory"
+}
+CRITICAL: Return ONLY the JSON object with NO additional text or explanation.
+Return EXACTLY this format with NO OTHER TEXT:
+{
+  "category": "EXACT main category",
+  "subcategory": "EXACT subcategory",
+  "subSubcategory": "EXACT sub-subcategory"
+}
+
+REMEMBER: Your primary goal is to use EXISTING categories. Creating new ones should be your LAST RESORT.`;
+
+    console.log('📤 Sending to backend:', { prompt, attributes });
+
+    console.log('DEBUG - Full request:', { prompt, attributes });
+
+    const response = await fetch('http://localhost:5001/api/categorize-item', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt, attributes })
     });
 
-    // Handle new category creation if needed
-    if (response.newCategories) {
-      if (response.newCategories.category) {
-        const categoryId = await addNewCategory(response.newCategories.category);
-        
-        if (response.newCategories.subcategory) {
-          const subcategoryId = await addNewCategory(
-            response.newCategories.subcategory, 
-            categoryId
-          );
-
-          if (response.newCategories.subSubcategory) {
-            await addNewCategory(
-              response.newCategories.subSubcategory, 
-              subcategoryId
-            );
-          }
-        }
-      }
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message);
     }
 
-    return response;
-
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error("Categorization error:", error);
+    console.error('❌ Categorization error:', error);
     throw error;
   }
 };
@@ -577,3 +582,54 @@ const verifyCategories = async () => {
   console.log('📊 Category counts:', categories);
   return categories;
 }; 
+
+const countDefaultCategoriesExact = () => {
+  let mainCount = defaultCategories.length;
+  let subCount = 0;
+  let subSubCount = 0;
+
+  defaultCategories.forEach(main => {
+    console.log(`\n📁 ${main.name}:`);
+    subCount += main.subcategories.length;
+    
+    main.subcategories.forEach(sub => {
+      if (Array.isArray(sub.subcategories)) {
+        console.log(`  └─ ${sub.name}: ${sub.subcategories.length} sub-subcategories`);
+        subSubCount += sub.subcategories.length;
+      }
+    });
+  });
+
+  console.log('\n📊 Total Counts:');
+  console.log(`Main Categories: ${mainCount}`);
+  console.log(`Subcategories: ${subCount}`);
+  console.log(`Sub-subcategories: ${subSubCount}`);
+  console.log(`Total: ${mainCount + subCount + subSubCount}`);
+  
+  return { mainCount, subCount, subSubCount, total: mainCount + subCount + subSubCount };
+}; 
+
+const formatCategoryHierarchy = (categories) => {
+  let hierarchyText = '';
+  
+  categories.forEach(mainCat => {
+    // Add main category
+    hierarchyText += `\n📁 ${mainCat.name}\n`;
+    
+    // Add subcategories
+    mainCat.subcategories.forEach(subCat => {
+      hierarchyText += `  ├─ ${subCat.name}\n`;
+      
+      // Add sub-subcategories if they exist
+      if (Array.isArray(subCat.subcategories)) {
+        subCat.subcategories.forEach(subSubCat => {
+          hierarchyText += `     └─ ${subSubCat}\n`;
+        });
+      }
+    });
+  });
+
+  return hierarchyText;
+};
+
+

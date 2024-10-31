@@ -1,12 +1,12 @@
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const OpenAI = require('openai');
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import OpenAI from 'openai';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Initialize OpenAI
 const openai = new OpenAI({
@@ -22,7 +22,7 @@ app.post('/api/extract-attributes', async (req, res) => {
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -57,7 +57,7 @@ app.post('/api/calculate-similarity', async (req, res) => {
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -78,62 +78,36 @@ app.post('/api/calculate-similarity', async (req, res) => {
 });
 
 app.post('/api/categorize-item', async (req, res) => {
-  const { prompt, attributes } = req.body;
-
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "You are a categorization system. Based on the item attributes, return a JSON object with only two fields: category and subcategory. Example categories: Electronics, Accessories, Documents, etc."
-        },
-        {
-          role: "user",
-          content: `Categorize this item: ${JSON.stringify(attributes)}`
-        }
-      ],
-      response_format: { type: "json_object" }
-    });
-
-    res.json(JSON.parse(response.choices[0].message.content));
-  } catch (error) {
-    console.error('OpenAI API error:', error);
-    res.status(500).json({ error: 'Failed to categorize item' });
-  }
-});
-
-app.get('/api/test-openai', async (req, res) => {
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "user",
-          content: "Say hello world"
-        }
-      ]
-    });
+    const { prompt, attributes } = req.body;
     
-    console.log('OpenAI Test Response:', response);
-    res.json(response);
+    // Debug what we're receiving
+    console.log('📦 Received request body:', req.body);
+    
+    if (!prompt) {
+      console.error('❌ No prompt received in request');
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-1106-preview", // or your chosen model
+      messages: [{ 
+        role: "user", 
+        content: prompt 
+      }]
+    });
+
+    console.log('✅ OpenAI Response:', response.choices[0].message.content);
+    
+    res.json(response.choices[0].message);
   } catch (error) {
-    console.error('OpenAI Test Error:', error);
+    console.error('❌ Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-app.get('/api/check-key', (req, res) => {
-  const key = process.env.OPENAI_API_KEY;
-  console.log('Full API Key:', key);
-  res.json({ 
-    hasKey: !!key,
-    keyLength: key?.length,
-    startsWithSk: key?.startsWith('sk-'),
-    firstFourChars: key?.substring(0, 4)
-  });
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});

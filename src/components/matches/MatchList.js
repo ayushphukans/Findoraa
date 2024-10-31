@@ -36,7 +36,6 @@ const MatchCard = ({ match, index, onConfirm, onReject }) => {
     similarityScore,
     matchingAttributes,
     differences,
-    confidence,
     justification
   } = match;
 

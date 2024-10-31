@@ -1,7 +1,7 @@
 import { db } from '../config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { extractAttributes } from './attributeService';
-import { openai } from '../config/openai';
+import { makeOpenAIRequest } from '../config/openai';
 
 export const findPotentialMatches = async (newItem, topN = 5) => {
   console.log('🔍 Finding potential matches for:', newItem);
@@ -88,22 +88,13 @@ const calculateSimilarityScore = async (newItem, existingItem) => {
       }
     `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "You are a precise matching system. Respond only with the JSON format specified."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ]
+    const response = await makeOpenAIRequest('calculate-similarity', {
+      prompt,
+      newItem,
+      existingItem
     });
 
-    const result = JSON.parse(response.choices[0]?.message?.content || '{"score":0, "justification":"Error processing match"}');
-    return result;
+    return response || { score: 0, justification: "Error processing match" };
 
   } catch (error) {
     console.error('❌ Error calculating similarity:', error);

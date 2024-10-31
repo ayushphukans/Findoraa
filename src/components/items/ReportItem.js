@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { db, auth } from '../../config/firebase';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-import { Container, Form, Button, Card, Row, Col } from 'react-bootstrap';
+import { Container, Form, Button, Card, Row, Col, Modal } from 'react-bootstrap';
 import { FaMapMarkerAlt, FaCalendarAlt } from 'react-icons/fa';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
@@ -12,6 +12,7 @@ import darkTheme from '../../config/theme';
 import NavBar from '../layout/NavBar';  // Import NavBar component
 import styled from 'styled-components';
 import { extractAttributes } from '../../services/attributeService';
+import { findPotentialMatches } from '../../services/matchingService';
 
 const StyledFormControl = styled(Form.Control)`
   background-color: ${darkTheme.colors.surface} !important;
@@ -75,11 +76,14 @@ function ReportItem() {
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const [dateTime, setDateTime] = useState(new Date());
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [matchedItems, setMatchedItems] = useState([]);
 
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    
     try {
       const itemData = {
         lostOrFound,
@@ -90,18 +94,51 @@ function ReportItem() {
         time: dateTime.toTimeString().split(' ')[0],
         userId: auth.currentUser.uid,
         createdAt: Timestamp.now(),
+        category: 'uncategorized',
+        subcategory: 'other',
+        subSubcategory: null
       };
 
+      console.log('📝 Submitting new item:', itemData);
+
       const attributes = await extractAttributes(itemData);
-      itemData.category = attributes.category;
-      itemData.subcategory = attributes.subcategory;
       itemData.attributes = attributes;
 
-      await addDoc(collection(db, 'items'), itemData);
+      const categoryResponse = await fetch('http://localhost:5001/api/categorize-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attributes })
+      });
+      
+      const categories = await categoryResponse.json();
+      
+      const finalItemData = {
+        ...itemData,
+        attributes,
+        category: categories.category,
+        subcategory: categories.subcategory,
+        subSubcategory: categories.subSubcategory
+      };
+
+      await addDoc(collection(db, 'items'), finalItemData);
       alert('Item reported successfully!');
       navigate('/feed');
+
+      // Check for matches
+      console.log('🔍 Looking for matches...');
+      const matches = await findPotentialMatches(finalItemData);
+      
+      if (matches && matches.length > 0) {
+        console.log('✅ Found matches:', matches);
+        setMatchedItems(matches);  // Store the matches
+        setShowMatchModal(true);   // Show the match modal
+        // navigate('/matches');   // Maybe don't navigate immediately, let user see matches first
+      } else {
+        console.log('❌ No matches found');
+      }
+
     } catch (error) {
-      console.error('Error adding item:', error);
+      console.error('Error:', error);
       alert('Error reporting item. Please try again.');
     }
   };
@@ -129,6 +166,10 @@ function ReportItem() {
     } else {
       return "Example: I found a brown leather wallet with the initials 'R.T.' embossed on the front. Inside, there are several credit cards, a driver's license, and a couple of euros. It was found on a bus in Berlin around 3:00 PM. The wallet is in good condition but has a small scratch on the back. If this sounds like your wallet, please contact me and confirm some of the items inside.";
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowMatchModal(false);
   };
 
   return (
@@ -219,11 +260,29 @@ function ReportItem() {
           </Col>
         </Row>
       </Container>
+
+      <Modal show={showMatchModal} onHide={handleCloseModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Potential Matches Found!</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {matchedItems.map((match, index) => (
+            <div key={index}>
+              <h5>Match Score: {match.similarityScore}%</h5>
+              <p>{match.justification}</p>
+            </div>
+          ))}
+        </Modal.Body>
+      </Modal>
     </>
   );
 }
 
 export default ReportItem;
+
+
+
+
 
 
 

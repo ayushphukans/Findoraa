@@ -1,11 +1,3 @@
-import OpenAI from 'openai';
-
-// Initialize OpenAI with your API key
-const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
-});
-
 export async function extractAttributes(item) {
   console.log('🔍 Extracting attributes for item:', item);
   
@@ -39,29 +31,21 @@ export async function extractAttributes(item) {
     - **Contents:** 
     `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant that extracts item attributes. Return only valid JSON."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ]
+    const response = await fetch('http://localhost:5001/api/extract-attributes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt, item })
     });
 
-    const attributes = JSON.parse(response.choices[0].message.content);
-    return attributes || {
-      category: 'Miscellaneous',
-      subcategory: 'Other',
-      color: extractColor(item.description),
-      material: 'unknown',
-      type: 'other',
-      condition: 'unknown'
-    };
+    if (!response.ok) {
+      throw new Error('Failed to extract attributes');
+    }
+
+    const result = await response.json();
+    const attributes = result.attributes;
+    return attributes;
 
   } catch (error) {
     console.log('❌ Attribute extraction error:', error);

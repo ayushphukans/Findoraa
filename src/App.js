@@ -9,7 +9,7 @@ import Login from "./components/auth/Login";
 import Feed from "./components/pages/Feed";
 import ReportItem from "./components/items/ReportItem";
 
-import Matches from "./components/items/Matches";
+import Matches from "./components/matches/Matches";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import Profile from './components/pages/Profile';
 import 'bootstrap/dist/css/bootstrap.min.css';

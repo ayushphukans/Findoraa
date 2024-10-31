@@ -1,4 +1,4 @@
-import openai from '../config/openai';
+import { makeOpenAIRequest } from '../config/openai';
 import { db } from '../config/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 
@@ -362,43 +362,58 @@ export const categorizeItem = async (attributes) => {
     const formattedHierarchy = formatHierarchy(existingCategories);
 
     const prompt = `
-      You are an intelligent categorization system for a lost and found application. Below is the current hierarchy of categories and subcategories:
+      You are a precise categorization system for a lost and found application. Your task is to categorize items according to our predefined hierarchy or create new categories when absolutely necessary.
 
-      
-       **Existing Categories and Subcategories:**
-      ${formattedHierarchy}
-      
-      **Task:**
-      Based on the extracted attributes of an item, assign it to the appropriate category and subcategory within the existing hierarchy. If the item does not fit into any existing category or subcategory, create a new one, ensuring that the hierarchical structure is maintained.
+      **Current Item Attributes:**
       ${JSON.stringify(attributes, null, 2)}
+
+      **Existing Category Hierarchy:**
+      ${formattedHierarchy}
+
+      **Instructions:**
+      1. FIRST, carefully analyze if the item fits into ANY existing category path
+      2. If it fits an existing path, use EXACT category names from our hierarchy
+      3. ONLY create new categories if the item CANNOT be reasonably placed in existing ones
+
+      **Examples:**
+      - For a "blue leather wallet":
+        ✓ Category: "Personal Items"
+        ✓ Subcategory: "Wallets"
+        ✓ Sub-subcategory: "Leather Wallets"
+
+      - For a "quantum teleporter" (doesn't exist in hierarchy):
+        ✓ Create new: {
+          "category": "Scientific Equipment",
+          "subcategory": "Experimental Devices",
+          "subSubcategory": "Quantum Devices"
+        }
+
+      **Rules for New Categories:**
+      1. Must be NECESSARY - don't create if similar category exists
+      2. Must be GENERIC enough to accommodate similar items
+      3. Must follow the same 3-level hierarchy pattern
+      4. Must use clear, standard terminology
 
       Return ONLY a JSON object with:
       {
-        "category": "main category name",
-        "subcategory": "subcategory name",
-        "subSubcategory": "sub-subcategory name (if applicable)",
+        "category": "exact category name or new category",
+        "subcategory": "exact subcategory name or new subcategory",
+        "subSubcategory": "exact sub-subcategory name or new sub-subcategory",
         "newCategories": {
-          "category": "new category to create (if needed)",
-          "subcategory": "new subcategory to create (if needed)",
-          "subSubcategory": "new sub-subcategory to create (if needed)"
+          "category": "only if creating new category",
+          "subcategory": "only if creating new subcategory",
+          "subSubcategory": "only if creating new sub-subcategory"
         }
-    }
+      }
     `;
 
-    const completion = await openai.chat.completions.create({
-      messages: [
-        { 
-          role: "system", 
-          content: "You are a precise categorization system. Always return valid JSON."
-        },
-        { role: "user", content: prompt }
-      ],
+    // Replace OpenAI direct call with backend call
+    const response = await makeOpenAIRequest('categorize-item', {
+      prompt,
+      attributes,
       model: "gpt-4",
-      response_format: { type: "json_object" },
       temperature: 0.3
     });
-
-    const response = JSON.parse(completion.choices[0].message.content);
 
     // Handle new category creation if needed
     if (response.newCategories) {
@@ -459,15 +474,28 @@ export const initializeCategories = async () => {
   console.log('🔧 Checking and initializing categories...');
   
   try {
-    // Check if categories already exist
     const categoriesRef = collection(db, 'categories');
     const snapshot = await getDocs(categoriesRef);
     
     if (snapshot.empty) {
       console.log('📝 No categories found. Adding default categories...');
       await addDefaultCategories();
+      const verification = await verifyCategories();
+      
+      // Log expected vs actual counts
+      const expectedCounts = {
+        level1: defaultCategories.length,
+        level2: defaultCategories.reduce((acc, cat) => acc + cat.subcategories.length, 0),
+        level3: defaultCategories.reduce((acc, cat) => 
+          acc + cat.subcategories.reduce((subAcc, subCat) => 
+            subAcc + (Array.isArray(subCat.subcategories) ? subCat.subcategories.length : 0), 0), 0)
+      };
+      
+      console.log('Expected counts:', expectedCounts);
+      console.log('Actual counts:', verification);
     } else {
-      console.log('✅ Categories already exist');
+      console.log('✅ Categories exist. Verifying...');
+      await verifyCategories();
     }
   } catch (error) {
     console.error('❌ Error initializing categories:', error);
@@ -476,8 +504,9 @@ export const initializeCategories = async () => {
 
 const addDefaultCategories = async () => {
   try {
+    console.log('🌳 Starting to add default categories...');
     for (const category of defaultCategories) {
-      // Add main category
+      console.log(`📁 Adding main category: ${category.name}`);
       const mainCategoryRef = await addDoc(collection(db, 'categories'), {
         name: category.name,
         parentId: null,
@@ -485,8 +514,8 @@ const addDefaultCategories = async () => {
         createdAt: new Date()
       });
 
-      // Add subcategories
       for (const subcategory of category.subcategories) {
+        console.log(`  └─ Adding subcategory: ${subcategory.name}`);
         const subCategoryRef = await addDoc(collection(db, 'categories'), {
           name: subcategory.name,
           parentId: mainCategoryRef.id,
@@ -494,9 +523,9 @@ const addDefaultCategories = async () => {
           createdAt: new Date()
         });
 
-        // Add sub-subcategories if they exist
         if (Array.isArray(subcategory.subcategories)) {
           for (const subSubcategory of subcategory.subcategories) {
+            console.log(`    └─ Adding sub-subcategory: ${subSubcategory}`);
             await addDoc(collection(db, 'categories'), {
               name: subSubcategory,
               parentId: subCategoryRef.id,
@@ -507,9 +536,9 @@ const addDefaultCategories = async () => {
         }
       }
     }
-    console.log('✅ Default categories added successfully');
+    console.log('✅ All categories added successfully');
   } catch (error) {
-    console.error('❌ Error adding default categories:', error);
+    console.error('❌ Error adding categories:', error);
     throw error;
   }
 };
@@ -527,4 +556,24 @@ export const ensureCategoriesExist = async () => {
   } catch (error) {
     console.error('❌ Error checking categories:', error);
   }
+}; 
+
+const verifyCategories = async () => {
+  console.log('🔍 Verifying category hierarchy...');
+  const categoriesRef = collection(db, 'categories');
+  const snapshot = await getDocs(categoriesRef);
+  
+  const categories = {
+    level1: 0,
+    level2: 0,
+    level3: 0
+  };
+
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    categories[`level${data.level}`]++;
+  });
+
+  console.log('📊 Category counts:', categories);
+  return categories;
 }; 

@@ -64,7 +64,10 @@ Return in EXACT JSON format:
 }
 
 Current item description:
-${item.description}`;
+${item.description}
+
+Current item title:
+${item.title}`;
 
     const response = await fetch('http://localhost:5001/api/extract-attributes', {
       method: 'POST',

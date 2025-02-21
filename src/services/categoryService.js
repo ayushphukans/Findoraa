@@ -1,439 +1,540 @@
-import { makeOpenAIRequest } from '../config/openai';
 import { db } from '../config/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 
 // Define default categories directly in the service
 export const defaultCategories = [
+  // 1) Electronics
   {
     name: "Electronics",
     subcategories: [
       {
         name: "Mobile Phones",
-        subcategories: ["Android Phones", "iPhones", "Feature Phones", "Smartphones"]
-      },
-      {
-        name: "Laptops",
-        subcategories: ["Windows Laptops", "MacBooks", "Chromebooks", "Gaming Laptops"]
+        subSub: ["Smartphones", "Feature Phones", "Satellite Phones", "Other Phones"]
       },
       {
         name: "Tablets",
-        subcategories: ["Android Tablets", "iPads", "Windows Tablets"]
+        subSub: ["Android Tablets", "iPads", "Windows Tablets", "Other Tablets"]
+      },
+      {
+        name: "Computers & Laptops",
+        subSub: ["Windows Laptops", "MacBooks", "Desktops", "Chromebooks", "Other Computers"]
       },
       {
         name: "Cameras",
-        subcategories: ["Digital Cameras", "DSLRs", "Mirrorless Cameras", "Action Cameras"]
-      },
-      {
-        name: "Accessories",
-        subcategories: ["Chargers", "Headphones", "Cases", "Screen Protectors", "Cables", "Batteries"]
-      },
-      {
-        name: "Wearable Technology",
-        subcategories: ["Smartwatches", "Fitness Trackers", "VR Headsets"]
+        subSub: ["Digital Cameras", "DSLRs", "Mirrorless Cameras", "Action Cameras", "Other Cameras"]
       },
       {
         name: "Audio Equipment",
-        subcategories: ["Speakers", "Earbuds", "Microphones", "Sound Systems"]
+        subSub: ["Headphones", "Speakers", "Microphones", "Amplifiers", "Audio Players", "Other Audio"]
       },
       {
-        name: "Gaming Consoles",
-        subcategories: ["PlayStation", "Xbox", "Nintendo Switch", "PC Gaming"]
+        name: "Wearables & Gadgets",
+        subSub: ["Smartwatches", "Fitness Trackers", "VR/AR Devices", "Other Wearables"]
+      },
+      {
+        name: "Gaming Devices",
+        subSub: ["Consoles", "Handhelds", "Gaming Accessories", "Other Gaming"]
       },
       {
         name: "Home Appliances",
-        subcategories: ["Refrigerators", "Microwaves", "Blenders", "Toasters", "Coffee Makers"]
-      },
-      {
-        name: "Computers",
-        subcategories: ["Desktops", "Monitors", "Printers", "Keyboards", "Mice"]
+        subSub: ["Kitchen Appliances", "Laundry Appliances", "Cleaning Appliances", "Heating/Cooling", "Other Appliances"]
       },
       {
         name: "Networking Devices",
-        subcategories: ["Routers", "Modems", "Switches", "Network Cables"]
-      }
+        subSub: ["Routers", "Modems", "Switches", "Wi-Fi Extenders", "Other Networking"]
+      },
+      {
+        name: "Electronic Accessories",
+        subSub: [
+          "Chargers & Power Adapters (Phone, Laptop, etc.)",
+          "Cables (USB, HDMI, etc.)",
+          "Cases & Covers",
+          "Screen Protectors",
+          "Power Banks",
+          "Stylus Pens",
+          "Mice & Trackpads",
+          "Memory Cards (SD, MicroSD, etc.)",
+          "Other Electronic Accessories"
+        ]
+      },
+      "Other Electronics"
     ]
   },
+
+  // 2) Clothing & Accessories
+  {
+    name: "Clothing & Accessories",
+    subcategories: [
+      {
+        name: "Men's Clothing",
+        subSub: ["Tops", "Bottoms", "Suits", "Underwear/Socks", "Sleepwear", "Swimwear", "Activewear", "Other Men's Clothing"]
+      },
+      {
+        name: "Women's Clothing",
+        subSub: [
+          "Tops",
+          "Bottoms",
+          "Dresses[(Includes formal dresses, gowns, performance dresses like tutus)]",
+          "Lingerie",
+          "Sleepwear",
+          "Swimwear",
+          "Activewear[(Includes workout clothing such as yoga pants, sports bras, running shorts, but not performance costumes)]",
+          "Other Women's Clothing"
+        ]
+      },
+      {
+        name: "Children's Clothing",
+        subSub: ["Boys' Clothing", "Girls' Clothing", "Other Children's Clothing"]
+      },
+      {
+        name: "Footwear",
+        subSub: ["Men's Footwear", "Women's Footwear", "Children's Footwear"]
+      },
+      {
+        name: "Fashion Accessories",
+        subSub: ["Hats/Scarves", "Gloves/Mittens", "Belts/Ties", "Jewelry/Watches", "Other Fashion Accessories"]
+      },
+      "Other Clothing Items"
+    ]
+  },
+
+  // 3) Personal Items
   {
     name: "Personal Items",
     subcategories: [
       {
-        name: "Wallets",
-        subcategories: ["Leather Wallets", "Card Holders", "Bifold Wallets", "Trifold Wallets"]
-      },
-      {
         name: "Keys",
-        subcategories: ["House Keys", "Car Keys", "Office Keys", "Keychains"]
+        subSub: ["House Keys", "Vehicle Keys", "Office Keys", "Locker/Padlock Keys", "Gate Keys", "Other Keys"]
       },
       {
-        name: "Bags",
-        subcategories: ["Backpacks", "Handbags", "Luggage", "Duffel Bags", "Messenger Bags"]
+        name: "Wallets & Card Holders",
+        subSub: ["Men's Wallets", "Women's Wallets", "Card Holders", "Coin Purses", "Passport Holders", "Other Wallets"]
       },
       {
-        name: "Jewelry",
-        subcategories: ["Rings", "Necklaces", "Bracelets", "Earrings", "Watches"]
-      },
-      {
-        name: "Clothing",
-        subcategories: [
-          "Shirts",
-          "Pants",
-          "Dresses",
-          "Jackets",
-          "Shoes",
-          "Hats",
-          "Sweaters",
-          "Coats",
-          "Shorts",
-          "Socks",
-          "Underwear"
+        name: "Bags & Luggage",
+        subSub: [
+          "Backpacks",
+          "Handbags",
+          "Suitcases",
+          "Laptop Bags",
+          "Tote Bags",
+          "Duffel/Gym Bags",
+          "Other Bags"
         ]
       },
       {
-        name: "Accessories",
-        subcategories: ["Belts", "Scarves", "Gloves", "Sunglasses", "Hats"]
+        name: "Eyewear",
+        subSub: ["Prescription Glasses", "Reading Glasses", "Sunglasses", "Contact Lenses", "Other Eyewear"]
       },
       {
-        name: "Health and Personal Care",
-        subcategories: ["Medicines", "Toiletries", "Medical Devices", "Personal Hygiene Items"]
+        name: "Personal Care",
+        subSub: ["Makeup", "Toiletries", "Perfume/Cologne", "Medications", "First Aid Kits", "Other Personal Care"]
       },
-      {
-        name: "Toys and Games",
-        subcategories: ["Action Figures", "Board Games", "Puzzles", "Dolls", "Video Games"]
-      },
-      {
-        name: "Musical Instruments",
-        subcategories: ["Guitars", "Keyboards", "Drums", "Wind Instruments", "String Instruments"]
-      },
-      {
-        name: "Sporting Goods",
-        subcategories: ["Bicycles", "Sports Balls", "Protective Gear", "Fitness Equipment"]
-      },
-      {
-        name: "Tools",
-        subcategories: ["Hand Tools", "Power Tools", "Garden Tools", "Measuring Tools"]
-      },
-      {
-        name: "Baby Items",
-        subcategories: ["Diapers", "Baby Clothes", "Toys", "Strollers", "Bottles"]
-      },
-      {
-        name: "Pet Accessories",
-        subcategories: ["Collars", "Leashes", "Toys", "Bedding", "Feeding Bowls"]
-      },
-      {
-        name: "Art and Crafts",
-        subcategories: ["Paintings", "Sculptures", "Craft Supplies", "Drawing Materials"]
-      },
-      {
-        name: "Books and Media",
-        subcategories: ["Books", "DVDs", "CDs", "Magazines", "eBooks"]
-      },
-      {
-        name: "Miscellaneous",
-        subcategories: ["Umbrellas", "Perfumes", "Sunglasses", "Glasses", "Notebooks"]
-      }
+      "Umbrellas",
+      "Other Personal Items"
     ]
   },
+
+  // 4) Documents & Cards
   {
-    name: "Documents",
+    name: "Documents & Cards",
     subcategories: [
       {
         name: "Identification",
-        subcategories: ["ID Cards", "Passports", "Licenses", "Driver's Licenses"]
+        subSub: ["Passports", "ID Cards", "Driver's Licenses", "Other Identification"]
       },
-      {
-        name: "Academic",
-        subcategories: ["Books", "Notes", "Certificates", "Diplomas", "Transcripts"]
-      },
-      {
-        name: "Financial",
-        subcategories: ["Bank Statements", "Credit Cards", "Checkbooks", "Receipts"]
-      },
-      {
-        name: "Legal",
-        subcategories: ["Contracts", "Wills", "Deeds", "Court Documents"]
-      }
+      "Financial Cards (Credit, Debit, ATM, Gift, etc.)",
+      "Legal Documents (Wills, Contracts, Deeds)",
+      "Academic Documents (Diplomas, Certificates)",
+      "Tickets & Passes (Boarding, Event, etc.)",
+      "Other Documents"
     ]
   },
+
+  // 5) Vehicles & Accessories
   {
-    name: "Vehicles",
+    name: "Vehicles & Accessories",
     subcategories: [
       {
         name: "Bicycles",
-        subcategories: ["Mountain Bikes", "Road Bikes", "Electric Bikes", "Kids' Bikes"]
+        subSub: ["Road Bikes", "Mountain Bikes", "Electric Bikes", "Kids' Bikes", "Other Bicycles"]
       },
       {
-        name: "Motorcycles",
-        subcategories: ["Sport Bikes", "Cruisers", "Scooters", "Electric Motorcycles"]
+        name: "Motorcycles & Scooters",
+        subSub: ["Motorcycles", "Scooters", "Electric Scooters", "Other Motorized Bikes"]
       },
       {
-        name: "Scooters",
-        subcategories: ["Electric Scooters", "Kick Scooters", "Motorized Scooters"]
+        name: "Automobiles",
+        subSub: ["Car Keys", "Car Accessories (GPS, etc.)", "License Plates", "Spare Tires", "Other Auto Items"]
       },
-      {
-        name: "Car Accessories",
-        subcategories: ["Car Chargers", "Seat Covers", "Floor Mats", "GPS Devices"]
-      }
+      "Other Vehicles"
     ]
   },
+
+  // 6) Office & Stationery
   {
-    name: "Office Supplies",
+    name: "Office & Stationery",
     subcategories: [
       {
-        name: "Stationery",
-        subcategories: ["Pens", "Notebooks", "Markers", "Staplers", "Paper Clips"]
+        name: "Writing Instruments",
+        subSub: ["Pens", "Pencils", "Markers", "Highlighters", "Stylus Pens", "Other Writing Tools"]
       },
       {
-        name: "Office Equipment",
-        subcategories: ["Printers", "Scanners", "Desks", "Chairs", "Lamps"]
+        name: "Paper Products",
+        subSub: ["Notebooks", "Notepads", "Sticky Notes", "Printer Paper", "Envelopes", "Other Paper"]
       },
       {
-        name: "Electronics",
-        subcategories: ["Calculators", "External Hard Drives", "USB Drives", "Headsets"]
-      }
+        name: "Desk & Organization",
+        subSub: ["Desk Organizers", "Staplers", "Tape Dispensers", "Scissors", "Other Desk Items"]
+      },
+      {
+        name: "Office Electronics",
+        subSub: ["Printers", "Scanners", "Projectors", "Fax Machines", "Other Office Electronics"]
+      },
+      "Mailing Supplies",
+      "Other Office Items"
     ]
   },
+
+  // 7) Home & Garden
   {
-    name: "Home Appliances",
+    name: "Home & Garden",
     subcategories: [
       {
-        name: "Kitchen Appliances",
-        subcategories: ["Refrigerators", "Microwaves", "Blenders", "Toasters", "Coffee Makers"]
+        name: "Furniture",
+        subSub: ["Sofas & Seating", "Tables & Desks", "Beds & Dressers", "Cabinets & Shelves", "Outdoor Furniture", "Other Furniture"]
       },
       {
-        name: "Laundry Appliances",
-        subcategories: ["Washing Machines", "Dryers", "Ironing Boards", "Irons"]
+        name: "Home Decor",
+        subSub: ["Rugs", "Curtains", "Wall Art", "Mirrors/Clocks", "Cushions/Pillows", "Other Decor"]
       },
       {
-        name: "Cleaning Appliances",
-        subcategories: ["Vacuum Cleaners", "Steam Mops", "Air Purifiers", "Dishwashers"]
+        name: "Kitchen & Dining",
+        subSub: ["Cookware", "Utensils", "Dinnerware", "Storage Containers", "Kitchen Gadgets", "Other Kitchen Items"]
       },
       {
-        name: "Heating and Cooling",
-        subcategories: ["Fans", "Heaters", "Air Conditioners", "Humidifiers"]
-      }
+        name: "Garden & Outdoor",
+        subSub: ["Gardening Tools", "Lawn Care", "Grills & Barbecues", "Plants/Seeds", "Other Garden Items"]
+      },
+      {
+        name: "Cleaning Supplies",
+        subSub: ["Cleaning Tools", "Cleaning Products", "Trash Bags", "Gloves", "Other Cleaning"]
+      },
+      "Other Home Items"
     ]
   },
+
+  // 8) Sports & Outdoors
   {
-    name: "Gaming",
+    name: "Sports & Outdoors",
     subcategories: [
       {
-        name: "Consoles",
-        subcategories: ["PlayStation", "Xbox", "Nintendo Switch", "PC Gaming"]
+        name: "Fitness Equipment",
+        subSub: ["Yoga Mats", "Dumbbells", "Resistance Bands", "Exercise Machines", "Other Fitness"]
       },
       {
-        name: "Accessories",
-        subcategories: ["Controllers", "Headsets", "Charging Stations", "Game Carts"]
+        name: "Team Sports",
+        subSub: [
+          "Football/Soccer Gear",
+          "Basketball Gear",
+          "Baseball/Softball",
+          "Hockey Gear",
+          "Cricket Gear",
+          "Other Team Sports"
+        ]
       },
       {
-        name: "Games",
-        subcategories: ["Video Games", "Board Games", "Card Games", "Puzzle Games"]
-      }
+        name: "Racquet Sports",
+        subSub: [
+          "Tennis",
+          "Badminton",
+          "Table Tennis",
+          "Squash",
+          "Pickleball",
+          "Other Racquet Sports"
+        ]
+      },
+      {
+        name: "Outdoor Recreation",
+        subSub: ["Camping/Hiking", "Fishing", "Water Sports", "Cycling", "Winter Sports", "Other Outdoor"]
+      },
+      "Other Sports Items"
     ]
   },
+
+  // 9) Toys & Games
   {
-    name: "Art Supplies",
+    name: "Toys & Games",
+    subcategories: [
+      "Action Figures & Collectibles",
+      "Dolls & Dollhouses",
+      "Building Toys (LEGO, K'NEX, etc.)",
+      "Educational Toys",
+      "Board & Card Games",
+      "Puzzles",
+      "Remote Control Toys",
+      "Video Games & Consoles",
+      "Outdoor Play (Swings, Kites, etc.)",
+      "Other Toys"
+    ]
+  },
+
+  // 10) Art & Crafts
+  {
+    name: "Art & Crafts",
     subcategories: [
       {
-        name: "Drawing",
-        subcategories: ["Pencils", "Charcoal", "Erasers", "Sharpeners"]
+        name: "Art Supplies",
+        subSub: ["Paints & Brushes", "Canvases & Sketchbooks", "Markers & Pencils", "Easels", "Other Art Tools"]
       },
       {
-        name: "Painting",
-        subcategories: ["Brushes", "Paints", "Canvases", "Palettes"]
+        name: "Craft Supplies",
+        subSub: ["Yarn/Knitting", "Beads/Jewelry Making", "Sewing/Embroidery", "Scrapbooking", "Other Craft Supplies"]
       },
       {
-        name: "Crafting",
-        subcategories: ["Glue Guns", "Scissors", "Ribbons", "Stickers"]
+        name: "Collectibles",
+        subSub: [
+          "Stamps/Coins[Used only for standalone stamps or coin collections]",
+          "Trading Cards",
+          "Figurines",
+          "Autographs",
+          "Memorabilia[Use for postcards, historical objects, war relics, sports memorabilia, etc.]",
+          "Other Collectibles"
+        ]
       },
       {
-        name: "Sculpting",
-        subcategories: ["Clay", "Tools", "Molds", "Wire"]
-      }
+        name: "Musical Instruments",
+        subSub: ["Guitars", "Keyboards/Pianos", "Drums/Percussion", "String/Wind Instruments", "Other Instruments"]
+      },
+      "Other Art Items"
     ]
   },
+
+  // 11) Books & Media
   {
-    name: "Personal Electronics",
+    name: "Books & Media",
+    subcategories: [
+      "Books (Fiction, Non-Fiction, etc.)",
+      "Magazines & Newspapers",
+      "Music (CDs, Vinyl, Digital)",
+      "Movies & TV (DVD/Blu-ray)",
+      "E-Books & E-Readers",
+      "Other Media"
+    ]
+  },
+
+  // 12) Pets & Pet Supplies
+  {
+    name: "Pets & Pet Supplies",
     subcategories: [
       {
-        name: "Wearables",
-        subcategories: ["Smartwatches", "Fitness Trackers", "VR Headsets"]
+        name: "Pet Animals",
+        subSub: ["Dogs", "Cats", "Birds", "Fish", "Reptiles", "Small Animals", "Other Pet Animals"]
       },
       {
-        name: "Portable Devices",
-        subcategories: ["E-Readers", "Portable Speakers", "Power Banks"]
+        name: "Pet Accessories",
+        subSub: [
+          "Collars & Leashes",
+          "Bowls & Feeders",
+          "Pet Toys",
+          "Pet Clothing",
+          "Beds & Bedding",
+          "Carriers & Crates",
+          "Other Pet Accessories"
+        ]
       },
       {
-        name: "Photography",
-        subcategories: ["Digital Cameras", "GoPros", "Camera Lenses", "Tripods"]
-      }
+        name: "Pet Food & Treats",
+        subSub: ["Dog Food", "Cat Food", "Bird Seed", "Fish Food", "Reptile Food", "Other Pet Food"]
+      },
+      {
+        name: "Grooming Supplies",
+        subSub: ["Shampoos", "Brushes", "Nail Clippers", "Dental Care", "Other Grooming"]
+      },
+      {
+        name: "Aquarium Supplies",
+        subSub: ["Tanks", "Filters", "Heaters", "Decorations", "Water Treatments", "Other Aquarium Items"]
+      },
+      "Other Pet Items"
     ]
   },
+
+  // 13) Health & Personal Care
+  {
+    name: "Health & Personal Care",
+    subcategories: [
+      {
+        name: "Medicines & First Aid",
+        subSub: [
+          "Prescription Medications",
+          "Over-the-Counter Medications",
+          "Bandages & Dressings",
+          "Pain Relievers",
+          "Other First Aid Supplies"
+        ]
+      },
+      "Medical Devices (Wheelchairs, etc.)",
+      "Personal Hygiene (Soaps, Deodorants)",
+      "Skincare & Cosmetics",
+      "Hair Care",
+      "Fragrances (Perfume, Cologne)",
+      "Other Health Items"
+    ]
+  },
+
+  // 14) Tools & Equipment
+  {
+    name: "Tools & Equipment",
+    subcategories: [
+      "Hand Tools (Hammers, Screwdrivers, etc.)",
+      "Power Tools (Drills, Saws, etc.)",
+      "Measuring Tools",
+      "Garden Tools",
+      "Safety Equipment (Gloves, Goggles)",
+      "Tool Storage",
+      "Other Tools"
+    ]
+  },
+
+  // 15) Miscellaneous
   {
     name: "Miscellaneous",
     subcategories: [
-      {
-        name: "Umbrellas",
-        subcategories: ["Standard Umbrellas", "Compact Umbrellas", "Golf Umbrellas"]
-      },
-      {
-        name: "Sunglasses",
-        subcategories: ["Polarized Sunglasses", "Fashion Sunglasses", "Sport Sunglasses"]
-      },
-      {
-        name: "Glasses",
-        subcategories: ["Eyeglasses", "Reading Glasses", "Contact Lenses"]
-      },
-      {
-        name: "Notebooks",
-        subcategories: ["Spiral Notebooks", "Hardcover Notebooks", "Digital Notebooks"]
-      },
-      {
-        name: "Batteries",
-        subcategories: ["AA Batteries", "AAA Batteries", "Rechargeable Batteries", "Car Batteries"]
-      }
+      "Batteries (AA, AAA, etc.)",
+      "Gift Cards",
+      "Unknown/Unique Items",
+      "Miscellaneous Accessories",
+      "Other Misc. Items"
+    ]
+  },
+
+  // 16) Other / Unclassified
+  {
+    name: "Other / Unclassified",
+    subcategories: [
+      "Item Not Listed Above"
     ]
   }
 ];
 
-// Get existing category hierarchy from Firebase
-const getExistingHierarchy = async () => {
-  try {
-    const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-    const categories = {};
-    
-    categoriesSnapshot.forEach(doc => {
-      categories[doc.id] = {
-        id: doc.id,
-        name: doc.data().name,
-        parentId: doc.data().parentId || null,
-        ...doc.data()
-      };
-    });
-
-    return categories;
-  } catch (error) {
-    console.error("Error fetching categories:", error);
-    throw error;
-  }
-};
 
 // Format hierarchy into a tree structure for the prompt
-const formatHierarchy = (categories) => {
-  const buildTree = (parentId = null, depth = 0) => {
-    const indent = "  ".repeat(depth);
-    let result = "";
-
-    Object.values(categories)
-      .filter(cat => cat.parentId === parentId)
-      .forEach(category => {
-        result += `${indent}- **${category.name}**\n`;
-        result += buildTree(category.id, depth + 1);
-      });
-
-    return result;
-  };
-
-  return buildTree();
+const formatCategoryHierarchy = (categories, indent = '') => {
+  let output = '';
+  
+  categories.forEach(category => {
+    if (typeof category === 'string') {
+      output += `${indent}└─ ${category}\n`;
+    } else if (typeof category === 'object' && category !== null) {
+      output += `${indent}├─ ${category.name}\n`;
+      if (Array.isArray(category.subcategories)) {
+        const newIndent = indent + '   ';
+        category.subcategories.forEach(subcat => {
+          if (typeof subcat === 'string') {
+            output += `${newIndent}└─ ${subcat}\n`;
+          } else if (typeof subcat === 'object' && subcat !== null && subcat.name) {
+            output += `${newIndent}├─ ${subcat.name}\n`;
+            // Add sub-subcategories if they exist
+            if (Array.isArray(subcat.subSub)) {
+              const subSubIndent = newIndent + '   ';
+              subcat.subSub.forEach(subsub => {
+                output += `${subSubIndent}└─ ${subsub}\n`;
+              });
+            }
+          }
+        });
+      }
+    }
+  });
+  
+  return output;
 };
-
-// Add new category to Firebase
-const addNewCategory = async (categoryName, parentId = null) => {
-  try {
-    const newCategory = {
-      name: categoryName,
-      parentId,
-      createdAt: new Date().toISOString()
-    };
-
-    const docRef = await addDoc(collection(db, 'categories'), newCategory);
-    return docRef.id;
-  } catch (error) {
-    console.error("Error adding category:", error);
-    throw error;
-  }
-};
-
 // Main categorization function
-export const categorizeItem = async (attributes) => {
+export const categorizeItem = async (attributes, title) => {
   try {
+    // Debug logs
+    console.log('🔍 Received attributes:', attributes);
+    console.log('📝 Title:', title);
+    console.log('🔎 Full attributes object:', JSON.stringify(attributes, null, 2));
+
     const prompt = `
-You are a STRICT categorization system for a lost and found application. Your PRIMARY DIRECTIVE is to use ONLY the predefined categories provided below. Creating new categories is STRICTLY FORBIDDEN unless absolutely no existing category fits.
+You are the OFFICIAL Findoraa Lost & Found CATEGORIZATION system.
 
-**Current Item Attributes:**
+YOUR ONE AND ONLY TASK:
+Categorize the MAIN ITEM described below into the EXACT category hierarchy. 
+You must NEVER invent, rename, or alter existing categories.
+Use the Given title(This may define somethings like Male/female-So you know which exact sub category) 
+and the attributes to do so. Here they are
+-------------------------------------------------------------------
+ITEM TITLE:
+${title} 
+-------------------------------------------------------------------
+ITEM ATTRIBUTES (do NOT alter these):
 ${JSON.stringify(attributes, null, 2)}
+-------------------------------------------------------------------
 
-**MANDATORY: USE ONLY THESE PREDEFINED CATEGORIES:**
+PREDEFINED CATEGORIES (NO OTHERS ALLOWED):
 ${formatCategoryHierarchy(defaultCategories)}
 
-**STRICT CATEGORIZATION RULES:**
+-------------------------------------------------------------------
+CRITICAL RULES (REPEAT THESE TO YOURSELF BEFORE ANSWERING):
 
-1. DEFAULT CATEGORIES ARE MANDATORY:
-- You MUST use ONLY categories from the hierarchy above
-- Creating new categories is STRICTLY FORBIDDEN
-- If unsure, use the closest matching category
-- When in doubt, use more general category instead of creating new ones
+1) NO NEW CATEGORIES:
+   - You can ONLY choose from the categories shown above.
+   - If you cannot find an exact or close match, use the designated fallback:
+     category = "Miscellaneous"
+     subcategory = "Other"
+     subSubcategory = "Unknown Items"
 
-2. CATEGORY SELECTION PROCESS:
-a) Main Category (Level 1):
-   - MUST match exactly one of the predefined main categories
-   - NO new main categories allowed
-   - If unclear, use the most logical parent category
+2) CATEGORIZE MAIN ITEM ONLY:
+   - If the description mentions contents (like a wallet with cards or a bag containing a laptop),
+     ignore those contents. Categorize the wallet or the bag itself.
+   - DO NOT create separate categories for each item inside.
 
-b) Subcategory (Level 2):
-   - MUST use existing subcategories only
-   - NO new subcategories unless absolutely necessary
-   - When in doubt, use "Other" subcategory of appropriate main category
+3) CATEGORY SELECTION PROCESS (Levels 1 → 2 → 3):
+   a) Main Category (Level 1):
+      - Must match EXACTLY one from the top-level list.
+      - If unsure, choose the closest logical main category.
+   b) Subcategory (Level 2):
+      - Must match EXACTLY one from that main category's subcategory list.
+      - If uncertain, pick the subcategory labeled "Other" (if it exists),
+        or fallback to the "Miscellaneous → Other → Unknown Items" path.
+   c) Sub-Subcategory (Level 3):
+      - Must match EXACTLY one from that subcategory's sub-subcategory list.
+      - If none is suitable, set subSubcategory to "Other" (if available) or null.
+      - Creating sub-subcategories is FORBIDDEN unless they already exist.
 
-c) Sub-subcategory (Level 3):
-   - MUST match existing sub-subcategories
-   - Use "Other" if no exact match exists
-   - Creating new ones requires STRONG justification
+4) OUTPUT FORMAT (JSON ONLY, NO EXTRA TEXT):
+   - Return exactly ONE JSON object with this structure:
+     {
+       "category": "EXACT main category name",
+       "subcategory": "EXACT subcategory name",
+       "subSubcategory": "EXACT sub-subcategory or null"
+     }
+   - NO extra text, no explanations, no disclaimers.
 
-3. BEFORE CREATING ANY NEW CATEGORY:
-- Verify NO existing category fits (check ALL possibilities)
-- Consider similar categories
-- Use more general category instead
-- Only create new if item CANNOT fit anywhere else
+5) ZERO TOLERANCE FOR MISTAKES:
+   - Double-check you are using only existing categories/subcategories.
+   - Double-check you are not inventing new or alternative labels.
+   - If truly in doubt, use the fallback:
+     {
+       "category": "Miscellaneous",
+       "subcategory": "Other",
+       "subSubcategory": "Unknown Items"
+     }
 
-IMPORTANT RULES:
-- Categorize ONLY the main item itself (e.g., "wallet"), NOT its contents
-- Do NOT categorize items found inside the main item
-- Return ONLY ONE category path for the main item type
+ANY DEVIATION FROM THESE RULES IS PROHIBITED.
 
+Now provide your final answer as JSON ONLY, strictly following this format.`;
 
-**VERIFICATION CHECKLIST:**
-✓ Is the category path in the predefined hierarchy?
-✓ Have you checked ALL possible existing categories?
-✓ Is there really NO suitable existing category?
-✓ Could a more general category work instead?
-
-Return ONLY valid category paths that EXACTLY match the hierarchy:
-{
-  "category": "EXACT existing main category",
-  "subcategory": "EXACT existing subcategory",
-  "subSubcategory": "EXACT existing sub-subcategory"
-}
-CRITICAL: Return ONLY the JSON object with NO additional text or explanation.
-Return EXACTLY this format with NO OTHER TEXT:
-{
-  "category": "EXACT main category",
-  "subcategory": "EXACT subcategory",
-  "subSubcategory": "EXACT sub-subcategory"
-}
-
-REMEMBER: Your primary goal is to use EXISTING categories. Creating new ones should be your LAST RESORT.`;
-
-    console.log('📤 Sending to backend:', { prompt, attributes });
-
-    console.log('DEBUG - Full request:', { prompt, attributes });
+    console.log('📤 FULL PROMPT BEING SENT TO CATEGORIZATION:', prompt);
 
     const response = await fetch('http://localhost:5001/api/categorize-item', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prompt, attributes })
+      body: JSON.stringify({ prompt, attributes, title })
     });
 
     if (!response.ok) {
@@ -476,90 +577,51 @@ Expected output:
 
 // Initialize categories if they don't exist
 export const initializeCategories = async () => {
-  console.log('🔧 Checking and initializing categories...');
-  
   try {
+    console.log('🚀 Starting category initialization...');
     const categoriesRef = collection(db, 'categories');
-    const snapshot = await getDocs(categoriesRef);
     
-    if (snapshot.empty) {
-      console.log('📝 No categories found. Adding default categories...');
-      await addDefaultCategories();
-      const verification = await verifyCategories();
-      
-      // Log expected vs actual counts
-      const expectedCounts = {
-        level1: defaultCategories.length,
-        level2: defaultCategories.reduce((acc, cat) => acc + cat.subcategories.length, 0),
-        level3: defaultCategories.reduce((acc, cat) => 
-          acc + cat.subcategories.reduce((subAcc, subCat) => 
-            subAcc + (Array.isArray(subCat.subcategories) ? subCat.subcategories.length : 0), 0), 0)
-      };
-      
-      console.log('Expected counts:', expectedCounts);
-      console.log('Actual counts:', verification);
-    } else {
-      console.log('✅ Categories exist. Verifying...');
-      await verifyCategories();
+    // Add each default category
+    for (const category of defaultCategories) {
+      console.log(`📁 Adding category: ${category.name}`);
+      await addDoc(categoriesRef, {
+        name: category.name,
+        subcategories: category.subcategories,
+        level: 1
+      });
     }
+    
+    console.log('✅ All categories added successfully');
+    return true;
   } catch (error) {
     console.error('❌ Error initializing categories:', error);
-  }
-};
-
-const addDefaultCategories = async () => {
-  try {
-    console.log('🌳 Starting to add default categories...');
-    for (const category of defaultCategories) {
-      console.log(`📁 Adding main category: ${category.name}`);
-      const mainCategoryRef = await addDoc(collection(db, 'categories'), {
-        name: category.name,
-        parentId: null,
-        level: 1,
-        createdAt: new Date()
-      });
-
-      for (const subcategory of category.subcategories) {
-        console.log(`  └─ Adding subcategory: ${subcategory.name}`);
-        const subCategoryRef = await addDoc(collection(db, 'categories'), {
-          name: subcategory.name,
-          parentId: mainCategoryRef.id,
-          level: 2,
-          createdAt: new Date()
-        });
-
-        if (Array.isArray(subcategory.subcategories)) {
-          for (const subSubcategory of subcategory.subcategories) {
-            console.log(`    └─ Adding sub-subcategory: ${subSubcategory}`);
-            await addDoc(collection(db, 'categories'), {
-              name: subSubcategory,
-              parentId: subCategoryRef.id,
-              level: 3,
-              createdAt: new Date()
-            });
-          }
-        }
-      }
-    }
-    console.log('✅ All categories added successfully');
-  } catch (error) {
-    console.error('❌ Error adding categories:', error);
     throw error;
   }
 };
 
-// Call this function when your app initializes
 export const ensureCategoriesExist = async () => {
   try {
+    console.log('🔍 Checking if categories exist...');
     const categoriesRef = collection(db, 'categories');
     const snapshot = await getDocs(categoriesRef);
     
     if (snapshot.empty) {
-      console.log('🔄 Initializing default categories...');
+      console.log('📝 No categories found. Initializing default categories...');
       await initializeCategories();
+      console.log('✅ Categories initialized successfully');
+    } else {
+      console.log('✅ Categories collection exists');
     }
   } catch (error) {
-    console.error('❌ Error checking categories:', error);
+    console.error('❌ Error ensuring categories exist:', error);
+    // Try to initialize anyway if there's an error checking
+    try {
+      console.log('🔄 Attempting to reinitialize categories...');
+      await initializeCategories();
+      console.log('✅ Categories reinitialized successfully');
+    } catch (retryError) {
+      console.error('❌ Failed to reinitialize categories:', retryError);
+    }
   }
 }; 
 
@@ -582,54 +644,5 @@ const verifyCategories = async () => {
   console.log('📊 Category counts:', categories);
   return categories;
 }; 
-
-const countDefaultCategoriesExact = () => {
-  let mainCount = defaultCategories.length;
-  let subCount = 0;
-  let subSubCount = 0;
-
-  defaultCategories.forEach(main => {
-    console.log(`\n📁 ${main.name}:`);
-    subCount += main.subcategories.length;
-    
-    main.subcategories.forEach(sub => {
-      if (Array.isArray(sub.subcategories)) {
-        console.log(`  └─ ${sub.name}: ${sub.subcategories.length} sub-subcategories`);
-        subSubCount += sub.subcategories.length;
-      }
-    });
-  });
-
-  console.log('\n📊 Total Counts:');
-  console.log(`Main Categories: ${mainCount}`);
-  console.log(`Subcategories: ${subCount}`);
-  console.log(`Sub-subcategories: ${subSubCount}`);
-  console.log(`Total: ${mainCount + subCount + subSubCount}`);
-  
-  return { mainCount, subCount, subSubCount, total: mainCount + subCount + subSubCount };
-}; 
-
-const formatCategoryHierarchy = (categories) => {
-  let hierarchyText = '';
-  
-  categories.forEach(mainCat => {
-    // Add main category
-    hierarchyText += `\n📁 ${mainCat.name}\n`;
-    
-    // Add subcategories
-    mainCat.subcategories.forEach(subCat => {
-      hierarchyText += `  ├─ ${subCat.name}\n`;
-      
-      // Add sub-subcategories if they exist
-      if (Array.isArray(subCat.subcategories)) {
-        subCat.subcategories.forEach(subSubCat => {
-          hierarchyText += `     └─ ${subSubCat}\n`;
-        });
-      }
-    });
-  });
-
-  return hierarchyText;
-};
 
 

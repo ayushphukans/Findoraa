@@ -18,7 +18,7 @@ app.use(cors());
 app.use(express.json());
 
 app.post('/api/extract-attributes', async (req, res) => {
-  const { prompt, item } = req.body;
+  const { prompt, item, title } = req.body;
 
   try {
     const response = await openai.chat.completions.create({
@@ -26,29 +26,20 @@ app.post('/api/extract-attributes', async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "You are an attribute extractor. Always include the itemType in your response. Never return null for itemType if it can be determined from the description. Return a JSON object with lowercase keys."
+          content: "You are an attribute extractor. Always include the itemType in your response. Never return null for itemType if it can be determined from the description or title. Return a JSON object with lowercase keys."
         },
         {
           role: "user",
-          content: prompt
+          content: `Title: ${title}\nDescription: ${prompt}`
         }
       ],
       response_format: { type: "json_object" }
     });
 
-    const formattedResponse = {
-      attributes: JSON.parse(response.choices[0].message.content),
-      status: 'success'
-    };
-
-    res.json(formattedResponse);
+    res.json(response.choices[0].message);
   } catch (error) {
-    console.error('OpenAI API error:', error);
-    res.status(500).json({ 
-      error: 'Failed to extract attributes',
-      details: error.message,
-      status: 'error'
-    });
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -79,10 +70,10 @@ app.post('/api/calculate-similarity', async (req, res) => {
 
 app.post('/api/categorize-item', async (req, res) => {
   try {
-    const { prompt, attributes } = req.body;
+    const { prompt, attributes, title } = req.body;
     
     // Debug what we're receiving
-    console.log('📦 Received request body:', req.body);
+    console.log('📦 Received request body:', { prompt, attributes, title });
     
     if (!prompt) {
       console.error('❌ No prompt received in request');
@@ -90,10 +81,12 @@ app.post('/api/categorize-item', async (req, res) => {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-1106-preview", // or your chosen model
+      model: "gpt-4-1106-preview",
       messages: [{ 
         role: "user", 
-        content: prompt 
+        content: `Based on this item title: "${title}" and description: "${prompt}", 
+                  please categorize this item according to our category system. 
+                  Consider both the title and description when determining the most appropriate category.` 
       }]
     });
 

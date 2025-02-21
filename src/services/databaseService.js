@@ -9,6 +9,7 @@ import {
   where,
   getDocs
 } from 'firebase/firestore';
+import { defaultCategories } from './categoryService';
 
 // Store a new item with its categories
 export const storeNewItem = async (itemData, categoryAssignment) => {
@@ -74,312 +75,18 @@ const updateCategoryStats = async (categoryName) => {
 // Initialize database with default categories
 export const initializeDatabase = async () => {
   try {
-    // Your provided comprehensive category structure
-    const defaultCategories = [
-        {
-          name: "Electronics",
-          subcategories: [
-            {
-              name: "Mobile Phones",
-              subcategories: ["Android Phones", "iPhones", "Feature Phones", "Smartphones"]
-            },
-            {
-              name: "Laptops",
-              subcategories: ["Windows Laptops", "MacBooks", "Chromebooks", "Gaming Laptops"]
-            },
-            {
-              name: "Tablets",
-              subcategories: ["Android Tablets", "iPads", "Windows Tablets"]
-            },
-            {
-              name: "Cameras",
-              subcategories: ["Digital Cameras", "DSLRs", "Mirrorless Cameras", "Action Cameras"]
-            },
-            {
-              name: "Accessories",
-              subcategories: ["Chargers", "Headphones", "Cases", "Screen Protectors", "Cables", "Batteries"]
-            },
-            {
-              name: "Wearable Technology",
-              subcategories: ["Smartwatches", "Fitness Trackers", "VR Headsets"]
-            },
-            {
-              name: "Audio Equipment",
-              subcategories: ["Speakers", "Earbuds", "Microphones", "Sound Systems"]
-            },
-            {
-              name: "Gaming Consoles",
-              subcategories: ["PlayStation", "Xbox", "Nintendo Switch", "PC Gaming"]
-            },
-            {
-              name: "Home Appliances",
-              subcategories: ["Refrigerators", "Microwaves", "Blenders", "Toasters", "Coffee Makers"]
-            },
-            {
-              name: "Computers",
-              subcategories: ["Desktops", "Monitors", "Printers", "Keyboards", "Mice"]
-            },
-            {
-              name: "Networking Devices",
-              subcategories: ["Routers", "Modems", "Switches", "Network Cables"]
-            }
-          ]
-        },
-        {
-          name: "Personal Items",
-          subcategories: [
-            {
-              name: "Wallets",
-              subcategories: ["Leather Wallets", "Card Holders", "Bifold Wallets", "Trifold Wallets"]
-            },
-            {
-              name: "Keys",
-              subcategories: ["House Keys", "Car Keys", "Office Keys", "Keychains"]
-            },
-            {
-              name: "Bags",
-              subcategories: ["Backpacks", "Handbags", "Luggage", "Duffel Bags", "Messenger Bags"]
-            },
-            {
-              name: "Jewelry",
-              subcategories: ["Rings", "Necklaces", "Bracelets", "Earrings", "Watches"]
-            },
-            {
-              name: "Clothing",
-              subcategories: [
-                "Shirts",
-                "Pants",
-                "Dresses",
-                "Jackets",
-                "Shoes",
-                "Hats",
-                "Sweaters",
-                "Coats",
-                "Shorts",
-                "Socks",
-                "Underwear"
-              ]
-            },
-            {
-              name: "Accessories",
-              subcategories: ["Belts", "Scarves", "Gloves", "Sunglasses", "Hats"]
-            },
-            {
-              name: "Health and Personal Care",
-              subcategories: ["Medicines", "Toiletries", "Medical Devices", "Personal Hygiene Items"]
-            },
-            {
-              name: "Toys and Games",
-              subcategories: ["Action Figures", "Board Games", "Puzzles", "Dolls", "Video Games"]
-            },
-            {
-              name: "Musical Instruments",
-              subcategories: ["Guitars", "Keyboards", "Drums", "Wind Instruments", "String Instruments"]
-            },
-            {
-              name: "Sporting Goods",
-              subcategories: ["Bicycles", "Sports Balls", "Protective Gear", "Fitness Equipment"]
-            },
-            {
-              name: "Tools",
-              subcategories: ["Hand Tools", "Power Tools", "Garden Tools", "Measuring Tools"]
-            },
-            {
-              name: "Baby Items",
-              subcategories: ["Diapers", "Baby Clothes", "Toys", "Strollers", "Bottles"]
-            },
-            {
-              name: "Pet Accessories",
-              subcategories: ["Collars", "Leashes", "Toys", "Bedding", "Feeding Bowls"]
-            },
-            {
-              name: "Art and Crafts",
-              subcategories: ["Paintings", "Sculptures", "Craft Supplies", "Drawing Materials"]
-            },
-            {
-              name: "Books and Media",
-              subcategories: ["Books", "DVDs", "CDs", "Magazines", "eBooks"]
-            },
-            {
-              name: "Miscellaneous",
-              subcategories: ["Umbrellas", "Perfumes", "Sunglasses", "Glasses", "Notebooks"]
-            }
-          ]
-        },
-        {
-          name: "Documents",
-          subcategories: [
-            {
-              name: "Identification",
-              subcategories: ["ID Cards", "Passports", "Licenses", "Driver's Licenses"]
-            },
-            {
-              name: "Academic",
-              subcategories: ["Books", "Notes", "Certificates", "Diplomas", "Transcripts"]
-            },
-            {
-              name: "Financial",
-              subcategories: ["Bank Statements", "Credit Cards", "Checkbooks", "Receipts"]
-            },
-            {
-              name: "Legal",
-              subcategories: ["Contracts", "Wills", "Deeds", "Court Documents"]
-            }
-          ]
-        },
-        {
-          name: "Vehicles",
-          subcategories: [
-            {
-              name: "Bicycles",
-              subcategories: ["Mountain Bikes", "Road Bikes", "Electric Bikes", "Kids' Bikes"]
-            },
-            {
-              name: "Motorcycles",
-              subcategories: ["Sport Bikes", "Cruisers", "Scooters", "Electric Motorcycles"]
-            },
-            {
-              name: "Scooters",
-              subcategories: ["Electric Scooters", "Kick Scooters", "Motorized Scooters"]
-            },
-            {
-              name: "Car Accessories",
-              subcategories: ["Car Chargers", "Seat Covers", "Floor Mats", "GPS Devices"]
-            }
-          ]
-        },
-        {
-          name: "Office Supplies",
-          subcategories: [
-            {
-              name: "Stationery",
-              subcategories: ["Pens", "Notebooks", "Markers", "Staplers", "Paper Clips"]
-            },
-            {
-              name: "Office Equipment",
-              subcategories: ["Printers", "Scanners", "Desks", "Chairs", "Lamps"]
-            },
-            {
-              name: "Electronics",
-              subcategories: ["Calculators", "External Hard Drives", "USB Drives", "Headsets"]
-            }
-          ]
-        },
-        {
-          name: "Home Appliances",
-          subcategories: [
-            {
-              name: "Kitchen Appliances",
-              subcategories: ["Refrigerators", "Microwaves", "Blenders", "Toasters", "Coffee Makers"]
-            },
-            {
-              name: "Laundry Appliances",
-              subcategories: ["Washing Machines", "Dryers", "Ironing Boards", "Irons"]
-            },
-            {
-              name: "Cleaning Appliances",
-              subcategories: ["Vacuum Cleaners", "Steam Mops", "Air Purifiers", "Dishwashers"]
-            },
-            {
-              name: "Heating and Cooling",
-              subcategories: ["Fans", "Heaters", "Air Conditioners", "Humidifiers"]
-            }
-          ]
-        },
-        {
-          name: "Gaming",
-          subcategories: [
-            {
-              name: "Consoles",
-              subcategories: ["PlayStation", "Xbox", "Nintendo Switch", "PC Gaming"]
-            },
-            {
-              name: "Accessories",
-              subcategories: ["Controllers", "Headsets", "Charging Stations", "Game Carts"]
-            },
-            {
-              name: "Games",
-              subcategories: ["Video Games", "Board Games", "Card Games", "Puzzle Games"]
-            }
-          ]
-        },
-        {
-          name: "Art Supplies",
-          subcategories: [
-            {
-              name: "Drawing",
-              subcategories: ["Pencils", "Charcoal", "Erasers", "Sharpeners"]
-            },
-            {
-              name: "Painting",
-              subcategories: ["Brushes", "Paints", "Canvases", "Palettes"]
-            },
-            {
-              name: "Crafting",
-              subcategories: ["Glue Guns", "Scissors", "Ribbons", "Stickers"]
-            },
-            {
-              name: "Sculpting",
-              subcategories: ["Clay", "Tools", "Molds", "Wire"]
-            }
-          ]
-        },
-        {
-          name: "Personal Electronics",
-          subcategories: [
-            {
-              name: "Wearables",
-              subcategories: ["Smartwatches", "Fitness Trackers", "VR Headsets"]
-            },
-            {
-              name: "Portable Devices",
-              subcategories: ["E-Readers", "Portable Speakers", "Power Banks"]
-            },
-            {
-              name: "Photography",
-              subcategories: ["Digital Cameras", "GoPros", "Camera Lenses", "Tripods"]
-            }
-          ]
-        },
-        {
-          name: "Miscellaneous",
-          subcategories: [
-            {
-              name: "Umbrellas",
-              subcategories: ["Standard Umbrellas", "Compact Umbrellas", "Golf Umbrellas"]
-            },
-            {
-              name: "Sunglasses",
-              subcategories: ["Polarized Sunglasses", "Fashion Sunglasses", "Sport Sunglasses"]
-            },
-            {
-              name: "Glasses",
-              subcategories: ["Eyeglasses", "Reading Glasses", "Contact Lenses"]
-            },
-            {
-              name: "Notebooks",
-              subcategories: ["Spiral Notebooks", "Hardcover Notebooks", "Digital Notebooks"]
-            },
-            {
-              name: "Batteries",
-              subcategories: ["AA Batteries", "AAA Batteries", "Rechargeable Batteries", "Car Batteries"]
-            }
-          ]
-        }
-      ];
-
+    // Use the imported defaultCategories instead of redefining them here
+    
     // Function to add category and its subcategories
     const addCategoryWithSubcategories = async (category, parentId = null, level = 0) => {
       const categoryData = {
         name: category.name || category, // Handle both object and string cases
         parentId,
-        level, // Track hierarchy level
+        level,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        stats: {
-          itemCount: 0,
-          lastUpdated: serverTimestamp()
-        }
+        // Add subSub if it exists
+        subSub: category.subSub || null
       };
 
       const categoryRef = await addDoc(collection(db, 'categories'), categoryData);
@@ -427,6 +134,54 @@ export const getCategoryPath = async (categoryId) => {
     return path;
   } catch (error) {
     console.error("Error getting category path:", error);
+    throw error;
+  }
+};
+
+export const addItem = async (itemData) => {
+  try {
+    // Restructure the data with consistent field ordering
+    const orderedItemData = {
+      // Category hierarchy (always first)
+      category: itemData.category || null,
+      subcategory: itemData.subcategory || null,
+      subSubcategory: itemData.subSubcategory || null,
+
+      // Core item details
+      title: itemData.title,
+      description: itemData.description,
+      itemtype: itemData.itemtype,
+      lostOrFound: itemData.lostOrFound,
+
+      // Location and time
+      location: itemData.location,
+      date: itemData.date,
+      time: itemData.time,
+
+      // Item characteristics
+      color: itemData.color,
+      'brand/model': itemData['brand/model'],
+      material: itemData.material,
+      condition: itemData.condition,
+      'size/dimensions': itemData['size/dimensions'],
+
+      // Arrays of additional details
+      'unique identifiers': itemData['unique identifiers'] || [],
+      accessories: itemData.accessories || [],
+      contents: itemData.contents || [],
+
+      // Metadata (always last)
+      userId: itemData.userId,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      status: 'active'
+    };
+
+    const docRef = await addDoc(collection(db, 'items'), orderedItemData);
+    console.log('✅ Document written with ID:', docRef.id);
+    return docRef.id;
+  } catch (error) {
+    console.error('❌ Error adding document:', error);
     throw error;
   }
 }; 

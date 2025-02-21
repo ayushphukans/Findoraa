@@ -40,8 +40,17 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Initialize categories when app starts
-    ensureCategoriesExist();
+    const initializeApp = async () => {
+      try {
+        console.log('🔄 Initializing application...');
+        await ensureCategoriesExist();
+        console.log('✅ Application initialized successfully');
+      } catch (error) {
+        console.error('❌ Error initializing application:', error);
+      }
+    };
+
+    initializeApp();
   }, []);
 
   useEffect(() => {

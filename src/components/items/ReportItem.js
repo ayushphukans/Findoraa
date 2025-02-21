@@ -105,7 +105,7 @@ function ReportItem() {
       const attributes = await extractAttributes(itemData);
       itemData.attributes = attributes;
 
-      const categoryResponse = await categorizeItem(attributes);
+      const categoryResponse = await categorizeItem(attributes, itemData.title);
       console.log('📦 Raw category response:', categoryResponse);
 
       // Clean the response content - remove markdown formatting

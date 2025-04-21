@@ -130,7 +130,8 @@ function ReportItem() {
 
       console.log('📝 Final data to save:', finalItemData);
 
-      await addDoc(collection(db, 'items'), finalItemData);
+      const docRef = await addDoc(collection(db, 'items'), finalItemData);
+      finalItemData.id = docRef.id;
       alert('Item reported successfully!');
       navigate('/feed');
 

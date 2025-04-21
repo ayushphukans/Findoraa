@@ -82,8 +82,25 @@ ${item.title}`;
     }
 
     const result = await response.json();
-    const attributes = result.attributes;
-    return attributes;
+
+if (!result.content) {
+  throw new Error("Missing 'content' in response");
+}
+
+// Parse the attributes JSON from the content string
+let attributes;
+try {
+  attributes = JSON.parse(result.content);
+} catch (e) {
+  throw new Error("Failed to parse content into JSON: " + result.content);
+}
+
+// Validate presence
+if (!attributes || typeof attributes !== 'object') {
+  throw new Error("Parsed attributes are invalid");
+}
+
+return attributes;
 
   } catch (error) {
     console.log('❌ Attribute extraction error:', error);

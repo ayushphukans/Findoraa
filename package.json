@@ -34,7 +34,7 @@
     "nth-check": "2.1.1",
     "cross-spawn": "7.0.5",
     "postcss": "8.4.35",
-    "nanoid": "5.0.9",
+    "nanoid": "3.3.7",
     "@grpc/grpc-js": "1.9.15",
     "protobufjs": "7.2.5",
     "undici": "5.28.5"

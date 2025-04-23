@@ -48,17 +48,21 @@ export const findPotentialMatches = async (newItem, topN = 5) => {
       if (alreadyCompared) continue;
 
       const { score, justification } = await calculateSimilarityScore(newItem, item);
-      console.log('🧩 Match candidate before saving:', {
-        newItemId: newItem?.id,
-        existingItemId: item?.id,
-        newItemType: newItem?.lostOrFound,
-        existingItemType: item?.lostOrFound
-      });
-      await saveComparison(newItem, item, score, score >= 80);
 
+      // ───── determine confidence tier ─────
+      let confidence = 'unlikely';
       if (score >= 80) {
-        await notifyMatchUsers(newItem, item, score, justification);
-        scoredMatches.push({ item, similarityScore: score, justification });
+        confidence = 'high';
+      } else if (score >= 60) {
+        confidence = 'possible';
+      }
+
+      // store comparison outcome (true if "high" or "possible")
+      await saveComparison(newItem, item, score, confidence !== 'unlikely', justification);
+
+      if (confidence !== 'unlikely') {
+        await notifyMatchUsers(newItem, item, score, justification, confidence);
+        scoredMatches.push({ item, similarityScore: score, justification, confidence });
       }
     }
 
@@ -78,7 +82,7 @@ const wasCompared = async (id1, id2) => {
   return docSnap.exists();
 };
 
-const saveComparison = async (newItem, existingItem, score, matched) => {
+const saveComparison = async (newItem, existingItem, score, matched, justification = '') => {
   console.log('🧪 saveComparison received:', {
     newItemId: newItem?.id,
     existingItemId: existingItem?.id
@@ -124,12 +128,13 @@ const saveComparison = async (newItem, existingItem, score, matched) => {
     foundId: foundItem.id,
     compared: true,
     matchScore: score,
+    justification,
     matched,
     comparedAt: new Date().toISOString()
   });
 };
 
-const notifyMatchUsers = async (newItem, existingItem, score, justification) => {
+const notifyMatchUsers = async (newItem, existingItem, score, justification, confidence) => {
   console.log('📬 notifyMatchUsers received:', {
     newItemId: newItem?.id,
     existingItemId: existingItem?.id
@@ -172,6 +177,7 @@ const notifyMatchUsers = async (newItem, existingItem, score, justification) => 
     lostId: lostItem.id,
     foundId: foundItem.id,
     similarity: score,
+    confidence,          //  "high" or "possible"
     justification,
     chatStarted: false,
     createdAt: new Date().toISOString()
@@ -186,6 +192,7 @@ const notifyMatchUsers = async (newItem, existingItem, score, justification) => 
       lostItemId: lostItem.id,
       foundItemId: foundItem.id,
       similarity: score,
+      confidence,
       justification,
       read: false,
       createdAt: new Date().toISOString()
@@ -204,61 +211,48 @@ const notifyMatchUsers = async (newItem, existingItem, score, justification) => 
 const calculateSimilarityScore = async (newItem, existingItem) => {
   try {
     const prompt = `
-You are a LOST‑AND‑FOUND *matching algorithm* that must judge how similar two item
-reports are.  Follow the rubric, sum the points (cap 100), then output JSON.
+You are an expert LOST-AND-FOUND matching agent.
+Decide whether the two item reports below describe **the same physical item**.
 
-────────────────  SCORING RUBRIC  ────────────────
-1. UNIQUE IDENTIFIERS (max 30)
-   • Same engraving / tag text / serial number / sticker …………………… +30  
-   • Same distinctive damage / pattern / mark …………………………………… +20  
-   • Only generic colour/material overlap ………………………………………… +10  
+════════════════  PHASE 1  (Human-style plausibility)  ════════════════
+Give an overall rating **stars** ∈ {1-5}:
 
-2. ITEM TYPE & SUB‑TYPE (max 25)
-   • Exact same sub‑subcategory (e.g. “Hats/Scarves → Beanie”) ……… +25  
-   • Same item type but variant differs (beanie vs beret) ………………… +15  
-   • Same broad category only …………………………………………………………… +5  
+5 ⭐  Almost certainly the same item  
+4 ⭐  Very strong match  
+3 ⭐  Possibly the same – worth contacting both users  
+2 ⭐  Unlikely  
+1 ⭐  Clearly different  
 
-3. COLOUR (max 10)
-   • Primary colour identical …………………………………………………………… +10  
-   • Very similar shade (navy vs dark blue) ……………………………………… +7  
-   • Only secondary colour matches ………………………………………………… +3  
+– Think like a helpful human: allow for location drift, partial accessory sets, paraphrased wording, etc.  
+– Do **not** subtract points here; stars reflect gut confidence only.
 
-4. BRAND / MODEL (max 10)
-   • Exact brand or model matches …………………………………………………… +10  
-   • Brand missing in one report but other cues suggest same make …… +5  
+════════════════  PHASE 2  (Structured rubric; max 70 pts)  ════════════
+Apply **only if stars ≥ 3**.  Award points (never subtract):
 
-5. LOCATION PROXIMITY (max 10)
-   • Same specific place (street / station / shop) ………………………………… +10  
-   • Same neighbourhood (< 3 km) ……………………………………………………… +5  
-   • Same city but far away ……………………………………………………………… +2  
+| Bucket | Max pts | What counts |
+|--------|---------|-------------|
+| **A. Unique identifiers / markings** | 25 | serial numbers, engravings, custom stickers, distinctive damage, text on labels **or recognisable paraphrase/partial** |
+| **B. Item type + variant** | 15 | same specific sub-type (e.g. “mirrorless camera” vs “camera”), form factor, variant |
+| **C. Brand / make / model** | 10 | manufacturer, issuer, series name—even if given in only one report but logically implied |
+| **D. Physical attributes** | 10 | colour, material, size, pattern; award higher for primary attributes |
+| **E. Context clues** | 15 | route / seat / station, accessory subset (e.g. lost “bag + charger”, found “charger” with matching score sticker), usage scenario, packaging, etc. |
+| **F. Date proximity** | 5 | same calendar day 5, ±1‑3 days 3, ±4‑7 days 1 |
 
-6. DATE PROXIMITY (max 5)
-   • Same day …………………………………………………………………………………… +5  
-   • 1‑3 days difference ……………………………………………………………………… +3  
-   • 4‑7 days difference ……………………………………………………………………… +1  
+════════════════  FINAL SCORE  ════════════════
+**Total = (stars × 6) + rubricPoints**, cap 100.  
+≥ 80 → “high-confidence”    60‑79 → “possible”    < 60 → “unlikely”.
 
-7. ACCESSORIES / SET RELATION (max 10)    <‑‑ NEW, bigger weight
-   • *Exact* accessory set matches (hat **and** scarf) …………………………… +10  
-   • One report lists a **subset** of the other but shares a unique  
-     identifier on that subset item (e.g. lost “hat + scarf”, found only  
-     hat **with same tag**) …………………………………………………………………… +7  
-   • Some accessories match but no unique identifier …………………………… +4  
-
-➜ TOTAL ≥ 80  →  *high‑confidence match*  
-➜ 60 – 79     →  *possible match*  
-➜ < 60        →  *unlikely match*
-
-────────────────  OUTPUT FORMAT  ────────────────
+════════════════  OUTPUT FORMAT  ════════════════
 Return **only** valid JSON:
 
 {
-  "score": <integer 0‑100>,
-  "justification": "<≤250 chars explaining key overlaps / mismatches>"
+  "score": <integer 0-100>,
+  "justification": "<≤250 chars summarising the main overlaps / doubts>"
 }
 
-NO markdown, no extra keys.
+No markdown, no other keys.
 
-────────────────  DATA  ────────────────
+════════════════  DATA  ════════════════
 # NEW ITEM
 Title: "${newItem.title}"
 Description: "${newItem.description}"
@@ -273,7 +267,6 @@ Attributes: ${JSON.stringify(existingItem.attributes)}
 Location: "${existingItem.location}"
 Date: "${existingItem.date}"
 `;
-
     const result = await makeOpenAIRequest('calculate-similarity', { prompt });
     return result || { score: 0, justification: "No response from LLM" };
   } catch (err) {
@@ -287,6 +280,7 @@ export const formatMatchesForDisplay = (matches) => {
     id: match.item.id,
     score: match.similarityScore,
     justification: match.justification,
+    confidence: match.confidence,
     details: {
       title: match.item.title,
       description: match.item.description,

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Navbar, Nav, Button, Container, Dropdown } from 'react-bootstrap';
+import useMatchNotifications from '../../hooks/useMatchNotifications';
+import { Navbar, Nav, Button, Container, Dropdown, Badge } from 'react-bootstrap';
 import { FaArrowLeft, FaUser, FaPlus, FaSignOutAlt, FaBell } from 'react-icons/fa';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../components/auth/AuthProvider';
@@ -11,6 +12,10 @@ function NavBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAuth();
+
+  // subscribe to match notifications
+  const { notifications, unreadCount } = useMatchNotifications(currentUser?.uid);
+
   const [showNotifications, setShowNotifications] = useState(false);
 
   const handleBack = () => {
@@ -80,13 +85,26 @@ function NavBar() {
                 <FaPlus style={iconStyle} /> Report
               </Button>
               <Dropdown show={showNotifications} onToggle={toggleNotifications}>
-                <Dropdown.Toggle as={Button} style={buttonStyle}>
+                <Dropdown.Toggle as={Button} style={buttonStyle} className="position-relative">
                   <FaBell style={iconStyle} />
+                  {unreadCount > 0 && (
+                    <Badge bg="danger" pill className="position-absolute" style={{ top: '0.2rem', right: '0.2rem' }}>
+                      {unreadCount}
+                    </Badge>
+                  )}
                 </Dropdown.Toggle>
                 <Dropdown.Menu align="end" style={dropdownStyle}>
-                  <Dropdown.Item style={{ color: darkTheme.text.primary }}>
-                    All notifications up to date
-                  </Dropdown.Item>
+                  {notifications.length === 0 ? (
+                    <Dropdown.Item style={{ color: darkTheme.text.primary }}>
+                      All notifications up to date
+                    </Dropdown.Item>
+                  ) : (
+                    notifications.map(n => (
+                      <Dropdown.Item key={n.id} as={Link} to={`/matches/${n.id}`} style={{ color: darkTheme.text.primary }}>
+                        Potential match (score: {n.similarity})
+                      </Dropdown.Item>
+                    ))
+                  )}
                 </Dropdown.Menu>
               </Dropdown>
               <Button as={Link} to="/profile" style={buttonStyle}>

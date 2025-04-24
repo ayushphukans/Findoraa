@@ -8,28 +8,19 @@ export default function useMatchNotifications(userId) {
 
   useEffect(() => {
     if (!userId) return;
-
     const q = query(
-      collection(db, 'confirmed_matches'),
-      where('notified', '!=', userId)
+      collection(db, 'notifications'),
+      where('receiverId', '==', userId),
+      where('read', '==', false)
     );
-
     const unsubscribe = onSnapshot(q, snapshot => {
-      const relevant = [];
-      let count = 0;
-
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.lostId === userId || data.foundId === userId) {
-          relevant.push({ id: doc.id, ...data });
-          count += 1;
-        }
-      });
-
-      setNotifications(relevant);
-      setUnreadCount(count);
+      const notifs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setNotifications(notifs);
+      setUnreadCount(notifs.length);
     });
-
     return () => unsubscribe();
   }, [userId]);
 

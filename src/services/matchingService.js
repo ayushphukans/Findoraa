@@ -6,8 +6,7 @@ import {
   doc,
   setDoc,
   getDoc,
-  addDoc,
-  writeBatch
+  addDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { makeOpenAIRequest } from '../config/openai';
@@ -172,40 +171,33 @@ const notifyMatchUsers = async (newItem, existingItem, score, justification, con
     return;
   }
 
-  const ref = collection(db, 'confirmed_matches');
-  await addDoc(ref, {
-    lostId: lostItem.id,
-    foundId: foundItem.id,
+  // Push unread notifications for both users
+  const notifRef = collection(db, 'notifications');
+  const matchId = [newItem.id, existingItem.id].sort().join('_');
+
+  await addDoc(notifRef, {
+    matchId,
+    receiverId: lostItem.userId,
+    lostItemId: lostItem.id,
+    foundItemId: foundItem.id,
     similarity: score,
-    confidence,          //  "high" or "possible"
+    confidence,
     justification,
-    chatStarted: false,
+    read: false,
     createdAt: new Date().toISOString()
   });
-  /* ----------  NEW: push unread notifications for both parties  ---------- */
-  try {
-    const notifRef = collection(db, 'notifications');
-    const batch = writeBatch(db);
 
-    const buildPayload = (receiverId) => ({
-      receiverId,
-      lostItemId: lostItem.id,
-      foundItemId: foundItem.id,
-      similarity: score,
-      confidence,
-      justification,
-      read: false,
-      createdAt: new Date().toISOString()
-    });
-
-    batch.set(doc(notifRef), buildPayload(lostItem.userId));
-    batch.set(doc(notifRef), buildPayload(foundItem.userId));
-
-    await batch.commit();
-  } catch (err) {
-    console.error('❌ Error writing notifications:', err);
-  }
-  /* ----------------------------------------------------------------------- */
+  await addDoc(notifRef, {
+    matchId,
+    receiverId: foundItem.userId,
+    lostItemId: lostItem.id,
+    foundItemId: foundItem.id,
+    similarity: score,
+    confidence,
+    justification,
+    read: false,
+    createdAt: new Date().toISOString()
+  });
 };
 
 const calculateSimilarityScore = async (newItem, existingItem) => {

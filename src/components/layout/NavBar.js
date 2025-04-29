@@ -7,6 +7,8 @@ import { useAuth } from '../../components/auth/AuthProvider';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import darkTheme from '../../config/theme';
+import { updateDoc, doc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 function NavBar() {
   const navigate = useNavigate();
@@ -17,6 +19,20 @@ function NavBar() {
   const { notifications, unreadCount } = useMatchNotifications(currentUser?.uid);
 
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // mark all displayed notifications as read in Firestore
+  const markAllRead = async () => {
+    if (!currentUser?.uid || notifications.length === 0) return;
+    try {
+      await Promise.all(
+        notifications.map(n =>
+          updateDoc(doc(db, 'notifications', n.id), { read: true })
+        )
+      );
+    } catch (err) {
+      console.error('Error marking notifications read:', err);
+    }
+  };
 
   const handleBack = () => {
     navigate(-1);
@@ -32,7 +48,12 @@ function NavBar() {
   };
 
   const toggleNotifications = () => {
-    setShowNotifications(!showNotifications);
+    const opening = !showNotifications;
+    setShowNotifications(opening);
+    // when opening the dropdown, mark all as read
+    if (opening) {
+      markAllRead();
+    }
   };
 
   const isHomePage = location.pathname === '/';

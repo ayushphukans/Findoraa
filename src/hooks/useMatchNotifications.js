@@ -18,6 +18,8 @@ export default function useMatchNotifications(userId) {
         id: doc.id,
         ...doc.data()
       }));
+      console.debug('useMatchNotifications: userId=', userId, 'raw count=', snapshot.docs.length);
+      console.debug('useMatchNotifications: notifications=', notifs);
       setNotifications(notifs);
       setUnreadCount(notifs.length);
     });
